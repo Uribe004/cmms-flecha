@@ -253,7 +253,7 @@ textarea{resize:none;min-height:80px}
   <img src="https://flechagasolineras.com.mx/wp-content/uploads/2019/07/logo_gasolineras_flecha.png" class="auth-logo" alt="Flecha Gasolineras" onerror="this.style.display='none'">
   <div class="auth-card">
     <p class="auth-title">Sistema de Mantenimiento</p>
-    <p class="auth-sub">Selecciona tu perfil e ingresa tu NIP</p>
+    <p class="auth-sub">Selecciona tu perfil para continuar</p>
     <div class="fl">
       <label>¿Quién eres?</label>
       <select id="au">
@@ -289,13 +289,8 @@ textarea{resize:none;min-height:80px}
         </optgroup>
       </select>
     </div>
-    <div class="fl">
-      <label>NIP de acceso</label>
-      <input type="password" inputmode="numeric" maxlength="4" id="ap" placeholder="••••" onkeypress="if(event.key==='Enter')doLogin()">
-    </div>
-    <p class="auth-err" id="aerr">NIP incorrecto.</p>
+    <p class="auth-err" id="aerr">Selecciona tu perfil.</p>
     <button class="btn-main" onclick="doLogin()"><i class="ti ti-login"></i>Entrar</button>
-    <p class="auth-hint">NIP demo: 1234 para todos los perfiles</p>
   </div>
 </div>
 
@@ -639,11 +634,8 @@ function getRole(u){
 }
 function doLogin(){
   const u=document.getElementById('au').value;
-  const p=document.getElementById('ap').value;
   const err=document.getElementById('aerr');
-  if(!u){showToast('Selecciona tu perfil');return;}
-  if(!NIPS[u]){err.style.display='block';err.textContent='Usuario no encontrado.';return;}
-  if(NIPS[u]!==p){err.style.display='block';err.textContent='NIP incorrecto. Verifica y vuelve a intentar.';return;}
+  if(!u){err.style.display='block';err.textContent='Selecciona tu perfil.';return;}
   err.style.display='none';
   CU=u;CR=getRole(u);
   try{sessionStorage.setItem('fg_u',u);}catch(e){}
@@ -1141,7 +1133,7 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 window.addEventListener('DOMContentLoaded',()=>{
   try{
     const s=sessionStorage.getItem('fg_u');
-    if(s&&NIPS[s]){CU=s;CR=getRole(s);document.getElementById('au').value=s;startApp();}
+    if(s&&UNAMES[s]){CU=s;CR=getRole(s);document.getElementById('au').value=s;startApp();}
   }catch(e){}
 });
 </script>
