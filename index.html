@@ -412,13 +412,19 @@ textarea{resize:none;min-height:80px}
       <div class="sh"><div class="sh-title">Plan de trabajo del día</div></div>
       <div id="plan-notif"></div>
       <div id="plan-hoy-list"></div>
-      <div class="sh" style="margin-top:16px"><div class="sh-title" style="font-size:14px">Tickets disponibles para agregar</div></div>
-      <div id="plan-disponibles"></div>
     </div>
 
     <!-- MIS TICKETS (técnicos) -->
     <div class="view" id="v-mis">
       <div class="sh"><div class="sh-title">Mis tickets</div></div>
+      <div class="frow" id="mis-filters">
+        <button class="fc on" onclick="filterMis('todos',this)">Todos</button>
+        <button class="fc" onclick="filterMis('Abierto',this)">Por iniciar</button>
+        <button class="fc" onclick="filterMis('En Proceso',this)">En proceso</button>
+        <button class="fc" onclick="filterMis('Esperando Material',this)">Esp. material</button>
+        <button class="fc" onclick="filterMis('Cerrado',this)">Cerrados</button>
+        <button class="fc" onclick="filterMis('vencido',this)">🔴 Vencidos</button>
+      </div>
       <div id="mis-list"></div>
     </div>
 
@@ -971,7 +977,8 @@ function openTicket(key){
     ${canManage&&t.estado==='Esperando Material'?`<div class="photo-area ${t.fotoMaterial?'has-photo':''}" style="margin-top:6px" onclick="document.getElementById('pi-mat').click()"><i class="ti ti-camera"></i><span>${t.fotoMaterial?'Foto cargada ✓':'Subir evidencia (OC, correo, foto)'}</span></div><input type="file" id="pi-mat" accept="image/*" capture="environment" style="display:none" onchange="uploadMatPhoto('${key}')">`:''}</div>`;
 
   let closeBlock='';
-  if(canManage&&t.estado!=='Cerrado'){
+  const canClose = canManage || (isTec && isMine);
+  if(canClose && t.estado!=='Cerrado' && t.estado!=='Abierto'){
     closeBlock=`<div class="sdiv" style="margin-top:4px">Cerrar ticket</div>
     <div class="fg"><label>Acción realizada <span>*</span></label><textarea id="caccion" placeholder="Describe qué se hizo...">${t.accion||''}</textarea></div>
     <div class="fg">
@@ -985,7 +992,9 @@ function openTicket(key){
 
   let tecBlock='';
   if(isTec&&isMine&&t.estado==='Asignado'){
-    tecBlock=`<div style="margin-top:14px"><button class="btn-main" style="background:var(--amber)" onclick="startTicket('${key}')"><i class="ti ti-player-play"></i>Marcar en proceso</button></div>`;
+    tecBlock=`<div class="sdiv" style="margin-top:4px">Acciones</div>
+    <p style="font-size:12px;color:var(--g500);margin-bottom:8px">Si vas a tardar en resolverlo, márcalo en proceso. Si ya lo resolviste, cierra directo abajo.</p>
+    <button class="bs bs-amber" style="width:100%;margin-bottom:4px" onclick="startTicket('${key}')"><i class="ti ti-player-play"></i>Marcar en proceso</button>`;
   }
 
   const steps=[{label:'Reportado',ts:t.ts,done:true},{label:t.tec?`Asignado a ${shortName(t.tec)}`:'Sin asignar',ts:t.tsA,done:!!t.tsA},{label:'Técnico en sitio',ts:t.tsI,done:!!t.tsI},{label:'Cerrado',ts:t.tsC,done:!!t.tsC}];
@@ -1025,7 +1034,7 @@ function openTicket(key){
     ${t.estado==='Esperando Material'?matBlock:''}
     ${t.estado!=='Cerrado'?`<div class="sla-row s-${sla.status}" style="margin-top:10px"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${sla.status==='over'?'🔴 SLA vencido':'SLA: '+sla.label+' restante'}</span></div>`:''}
     <div class="sdiv">Estado — ${estBadge(t.estado)}</div>${timeline}
-    ${assignBlock}${closeBlock}${tecBlock}${chatHtml}`;
+    ${assignBlock}${tecBlock}${closeBlock}${chatHtml}`;
   openModal('m-detail');
   setTimeout(()=>{ const cm=document.getElementById('chat-msgs');if(cm)cm.scrollTop=cm.scrollHeight; },100);
 }
@@ -1100,7 +1109,6 @@ function renderPlan(){
   });
 
   const planHoy=todos.filter(t=>t.planDia&&(t.planDiaFecha||0)>=hoy);
-  const disponibles=todos.filter(t=>!t.planDia||(t.planDiaFecha||0)<hoy);
 
   // Notificaciones de forzados no vistos
   const nuevos=planHoy.filter(t=>t.planForzado&&t.planForzadoTs&&t.planForzadoTs>=hoy&&!t.planVisto);
@@ -1109,10 +1117,10 @@ function renderPlan(){
     notifEl.innerHTML=nuevos.map(t=>`<div class="notif-banner" onclick="markPlanVisto('${t._key||t.id}')"><i class="ti ti-bell-ringing" style="font-size:20px;flex-shrink:0"></i><div><strong>${t.planForzadoPor||'Gerencia'}</strong> agregó <strong>${t.id}</strong> a tu plan de hoy<br><span style="font-size:11px;opacity:.8">${t.est} · ${t.cat}</span></div></div>`).join('');
   } else notifEl.innerHTML='';
 
-  // Header plan
+  // Plan de hoy
   const planEl=document.getElementById('plan-hoy-list');
   if(planHoy.length===0){
-    planEl.innerHTML='<div class="empty" style="padding:24px"><i class="ti ti-clipboard-list"></i><p>Sin tickets en tu plan de hoy.<br>Agrega tickets de la lista de abajo.</p></div>';
+    planEl.innerHTML='<div class="empty" style="padding:24px"><i class="ti ti-clipboard-list"></i><p>Sin tickets en tu plan de hoy.<br>Ve a "Mis tickets" para agregar trabajo a tu plan.</p></div>';
   } else {
     planEl.innerHTML=`<div class="plan-header"><i class="ti ti-clipboard-check"></i><div class="plan-header-txt"><div class="plan-header-title">Plan de trabajo de hoy</div><div class="plan-header-sub">${new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'})}</div></div><div class="plan-count">${planHoy.length}</div></div>`+sortTickets([...planHoy]).map(t=>{
       const sla=getSLA(t); const uc=t.urg==='Alta'?'alta':t.urg==='Media'?'media':'baja';
@@ -1125,23 +1133,6 @@ function renderPlan(){
       </div>`;
     }).join('');
   }
-
-  // Disponibles
-  const dispEl=document.getElementById('plan-disponibles');
-  if(disponibles.length===0){
-    dispEl.innerHTML='<div class="empty" style="padding:16px"><p style="font-size:12px;color:var(--g400)">No hay más tickets asignados disponibles</p></div>';
-  } else {
-    dispEl.innerHTML=sortTickets([...disponibles]).map(t=>{
-      const sla=getSLA(t); const uc=t.urg==='Alta'?'alta':t.urg==='Media'?'media':'baja';
-      return`<div class="tc tc-${uc}">
-        <div class="tc-top"><span class="tc-folio">${t.id}</span><span class="tc-time">${elapsed(t.ts)} · ${t.est}</span></div>
-        <div class="tc-tipo">${t.cat}</div><div class="tc-sub">${t.sub}</div>
-        <div class="tc-meta">${urgBadge(t.urg)}${estBadge(t.estado)}</div>
-        <div class="sla-row s-${sla.status}"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${sla.status==='over'?'🔴 Vencido':'⏱ '+sla.label}</span></div>
-        <button class="bs bs-blue" style="width:100%;margin-top:8px;font-size:12px" onclick="addTicketToPlan('${t._key||t.id}')"><i class="ti ti-plus"></i>Agregar a mi plan de hoy</button>
-      </div>`;
-    }).join('');
-  }
 }
 
 function addTicketToPlan(key){ fbUpd(key,{planDia:true,planDiaFecha:todayStart()}); showToast('✅ Agregado a tu plan de hoy'); }
@@ -1149,11 +1140,39 @@ function removeFromPlan(key){ fbUpd(key,{planDia:false}); showToast('Removido de
 function markPlanVisto(key){ fbUpd(key,{planVisto:true}); }
 
 // ── MIS TICKETS ───────────────────────────────────────────
+let misFilter = 'todos';
+function filterMis(f,el){ misFilter=f; document.querySelectorAll('#mis-filters .fc').forEach(b=>b.classList.remove('on')); if(el)el.classList.add('on'); renderMis(); }
+
 function renderMis(){
   const myName=TEC_MAP[window._CU]||'';
-  const mine=sortTickets([...window._tickets].filter(t=>t.tec===myName&&t.estado!=='Cerrado'));
+  let mine=[...window._tickets].filter(t=>t.tec===myName);
+  if(misFilter==='vencido') mine=mine.filter(t=>t.estado!=='Cerrado'&&getSLA(t).status==='over');
+  else if(misFilter!=='todos') mine=mine.filter(t=>t.estado===misFilter);
+  sortTickets(mine);
   const c=document.getElementById('mis-list'); if(!c)return;
-  c.innerHTML=mine.length?mine.map(t=>ticketCard(t)).join(''):'<div class="empty"><i class="ti ti-circle-check"></i><p>No tienes tickets asignados</p></div>';
+  c.innerHTML=mine.length?mine.map(t=>misTicketCard(t)).join(''):'<div class="empty"><i class="ti ti-circle-check"></i><p>No tienes tickets en esta categoría</p></div>';
+}
+
+function misTicketCard(t){
+  const sla=getSLA(t);
+  const uc=t.urg==='Alta'?'alta':t.urg==='Media'?'media':'baja';
+  const hoy=todayStart();
+  const enPlan = t.planDia && (t.planDiaFecha||0)>=hoy;
+  const extra=t.pin?' pinned':sla.status==='over'&&t.estado!=='Cerrado'?' vencido':sla.status==='warn'&&t.estado!=='Cerrado'?' riesgo':'';
+  const slaBar=t.estado!=='Cerrado'?`<div class="sla-row s-${sla.status}"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${sla.status==='over'?'🔴 Vencido':sla.waiting?'⏸ Esp. material':'⏱ '+sla.label}</span></div>`:'';
+  const tags=`${urgBadge(t.urg)}${estBadge(t.estado)}${enPlan?'<span class="badge b-blue"><i class="ti ti-calendar-check" style="font-size:10px"></i> En plan de hoy</span>':''}`;
+  let planBtn='';
+  if(t.estado!=='Cerrado'){
+    planBtn = enPlan
+      ? `<button class="bs bs-out" style="width:100%;margin-top:8px;font-size:12px" onclick="event.stopPropagation();removeFromPlan('${t._key||t.id}')"><i class="ti ti-minus"></i>Quitar del plan de hoy</button>`
+      : `<button class="bs bs-blue" style="width:100%;margin-top:8px;font-size:12px" onclick="event.stopPropagation();addTicketToPlan('${t._key||t.id}')"><i class="ti ti-plus"></i>Agregar a mi plan de hoy</button>`;
+  }
+  return`<div class="tc tc-${uc}${extra}" onclick="openTicket('${t._key||t.id}')">
+    <div class="tc-top"><span class="tc-folio">${t.pin?'⭐ ':''}${t.id}</span><span class="tc-time">${elapsed(t.ts)} · ${t.est}</span></div>
+    <div class="tc-tipo">${t.cat}</div><div class="tc-sub">${t.sub}</div>
+    <div class="tc-desc">${t.desc}</div>
+    <div class="tc-meta">${tags}</div>${slaBar}${planBtn}
+  </div>`;
 }
 
 // ── MI DASHBOARD ──────────────────────────────────────────
