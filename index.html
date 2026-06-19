@@ -448,6 +448,31 @@ textarea{resize:none;min-height:80px}
       <div id="usuarios-list"></div>
     </div>
 
+    <!-- PLANES (director/jefe) -->
+    <div class="view" id="v-planes">
+      <div class="sh">
+        <div><div class="sh-title">Planes de trabajo</div><div class="sh-sub" id="planes-date-sub"></div></div>
+      </div>
+      <div class="period-row">
+        <button class="bs bs-out" onclick="planesShiftDay(-1)" style="padding:8px 12px"><i class="ti ti-chevron-left"></i></button>
+        <button class="period-btn on" onclick="planesGoToday()" id="planes-today-btn">Hoy</button>
+        <button class="bs bs-out" onclick="planesShiftDay(1)" style="padding:8px 12px"><i class="ti ti-chevron-right"></i></button>
+      </div>
+      <div class="frow" id="planes-tec-filters"></div>
+      <div class="frow" id="planes-est-filters"></div>
+      <div class="frow" id="planes-status-filters">
+        <button class="fc on" onclick="setPlanesStatus('todos',this)">Todos</button>
+        <button class="fc" onclick="setPlanesStatus('Abierto',this)">Abiertos</button>
+        <button class="fc" onclick="setPlanesStatus('Asignado',this)">Asignados</button>
+        <button class="fc" onclick="setPlanesStatus('En Proceso',this)">En proceso</button>
+        <button class="fc" onclick="setPlanesStatus('Esperando Material',this)">Esp. material</button>
+        <button class="fc" onclick="setPlanesStatus('Cerrado',this)">Cerrados</button>
+        <button class="fc" onclick="setPlanesStatus('vencido',this)">🔴 Vencidos</button>
+        <button class="fc" onclick="setPlanesStatus('prioridad',this)">⭐ Prioridad</button>
+      </div>
+      <div id="planes-list"></div>
+    </div>
+
   </div>
   <nav class="bnav" id="bnav"></nav>
 </div>
@@ -537,6 +562,7 @@ window._ref = ref;
 window._push = push;
 window._set = set;
 window._update = update;
+window._onValue = onValue;
 window._fbReady = true;
 
 document.getElementById('loading-screen').style.display = 'none';
@@ -720,6 +746,25 @@ function todayStart(){ const d=new Date();d.setHours(0,0,0,0);return d.getTime()
 function fbUpd(key,data){ if(window._db)window._update(window._ref(window._db,`tickets/${key}`),data); }
 function fbSet(path,data){ if(window._db)window._set(window._ref(window._db,path),data); }
 
+// Bitácora permanente de plan diario: queda registrado aunque el ticket se cierre o se quite del plan visible
+function logPlanEntry(ticket,fecha){
+  if(!window._db||!ticket||!ticket.tec)return;
+  const dia = fecha || todayStart();
+  const entryKey = (ticket._key||ticket.id)+'_'+dia;
+  const path = `planHistorial/${dia}/${entryKey}`;
+  window._set(window._ref(window._db,path), {
+    ticketKey: ticket._key||ticket.id,
+    ticketId: ticket.id,
+    tec: ticket.tec,
+    est: ticket.est,
+    cat: ticket.cat,
+    sub: ticket.sub,
+    urg: ticket.urg,
+    fecha: dia,
+    ts: Date.now()
+  });
+}
+
 function _refreshCurrentView(){
   const v = document.querySelector('.view.on');
   if(!v) return;
@@ -816,7 +861,7 @@ function presetEst(){
 function buildNav(){
   const cr = window._CR;
   let items = [];
-  if(isMgr()) items=[{i:'ti-layout-dashboard',l:'Dashboard',v:'dash'},{i:'ti-ticket',l:'Tickets',v:'tickets'},{i:'ti-circle-plus',l:'Nuevo',v:'rep'},{i:'ti-settings',l:'Config',v:'cfg'},{i:'ti-users-group',l:'Usuarios',v:'usuarios'}];
+  if(isMgr()) items=[{i:'ti-layout-dashboard',l:'Dashboard',v:'dash'},{i:'ti-ticket',l:'Tickets',v:'tickets'},{i:'ti-calendar-stats',l:'Planes',v:'planes'},{i:'ti-circle-plus',l:'Nuevo',v:'rep'},{i:'ti-settings',l:'Config',v:'cfg'},{i:'ti-users-group',l:'Usuarios',v:'usuarios'}];
   else if(cr==='sup') items=[{i:'ti-layout-dashboard',l:'Dashboard',v:'dash'},{i:'ti-ticket',l:'Tickets',v:'tickets'}];
   else if(cr==='tec') items=[{i:'ti-clipboard-check',l:'Plan del día',v:'plan'},{i:'ti-ticket',l:'Mis tickets',v:'mis'},{i:'ti-chart-bar',l:'Mi desempeño',v:'mi-dash'}];
   else items=[{i:'ti-circle-plus',l:'Reportar',v:'rep'},{i:'ti-list',l:'Mis tickets',v:'est'}];
@@ -837,6 +882,7 @@ function navTo(v,el){
   if(v==='plan') renderPlan();
   if(v==='cfg') renderCfg();
   if(v==='usuarios') renderUsuarios();
+  if(v==='planes'){ loadPlanHistorial(); }
   if(v==='est') renderEst();
   if(v==='mi-dash') renderMiDash();
 }
@@ -1134,6 +1180,7 @@ function setWaiting(key){
 function addToPlan(key){
   const t=window._tickets.find(x=>(x._key||x.id)===key); if(!t||!t.tec)return;
   fbUpd(key,{planDia:true,planDiaFecha:todayStart(),planForzado:true,planForzadoTs:Date.now(),planForzadoPor:UNAMES[window._CU]||window._CU,planVisto:false});
+  logPlanEntry(t,todayStart());
   closeModal('m-detail'); showToast('✅ Agregado al plan del día de '+shortName(t.tec));
 }
 
@@ -1178,6 +1225,7 @@ function renderPlan(){
   // Verificar urgencias Alta que deben entrar automáticamente
   todos.filter(t=>t.urg==='Alta'&&!t.planDia).forEach(t=>{
     fbUpd(t._key||t.id,{planDia:true,planDiaFecha:hoy});
+    logPlanEntry(t,hoy);
   });
 
   const planHoy=todos.filter(t=>t.planDia&&(t.planDiaFecha||0)>=hoy);
@@ -1207,7 +1255,12 @@ function renderPlan(){
   }
 }
 
-function addTicketToPlan(key){ fbUpd(key,{planDia:true,planDiaFecha:todayStart()}); showToast('✅ Agregado a tu plan de hoy'); }
+function addTicketToPlan(key){
+  fbUpd(key,{planDia:true,planDiaFecha:todayStart()});
+  const t=window._tickets.find(x=>(x._key||x.id)===key);
+  logPlanEntry(t,todayStart());
+  showToast('✅ Agregado a tu plan de hoy');
+}
 function removeFromPlan(key){ fbUpd(key,{planDia:false}); showToast('Removido del plan de hoy'); }
 function markPlanVisto(key){ fbUpd(key,{planVisto:true}); }
 
@@ -1447,6 +1500,103 @@ function toggleTecActivo(key){
   fbSet('usuarios',window._usuarios);
   renderUsuarios();
   showToast(actual?'Técnico dado de baja':'Técnico reactivado');
+}
+
+// ── PLANES (vista gerencial de planes diarios por técnico) ────
+let planesDate = todayStart();
+let planesTecFilter = 'todos';
+let planesEstFilter = 'todos';
+let planesStatusFilter = 'todos';
+let planesHistorial = {};
+let planesUnsub = null;
+
+function planesShiftDay(delta){
+  const d = new Date(planesDate);
+  d.setDate(d.getDate()+delta);
+  planesDate = d.getTime();
+  loadPlanHistorial();
+}
+
+function planesGoToday(){ planesDate = todayStart(); loadPlanHistorial(); }
+
+function loadPlanHistorial(){
+  if(!window._db||!window._onValue){ renderPlanes(); return; }
+  const path = `planHistorial/${planesDate}`;
+  window._onValue(window._ref(window._db,path),(snap)=>{
+    planesHistorial = snap.exists() ? snap.val() : {};
+    renderPlanes();
+  });
+}
+
+function setPlanesTec(t,el){ planesTecFilter=t; document.querySelectorAll('#planes-tec-filters .fc').forEach(b=>b.classList.remove('on')); if(el)el.classList.add('on'); renderPlanes(); }
+function setPlanesTecByIndex(i,el){ const name=(window._planesTecList||[])[i]; setPlanesTec(name,el); }
+function setPlanesEst(e,el){ planesEstFilter=e; document.querySelectorAll('#planes-est-filters .fc').forEach(b=>b.classList.remove('on')); if(el)el.classList.add('on'); renderPlanes(); }
+function setPlanesEstByIndex(i,el){ setPlanesEst(ESTACIONES[i],el); }
+function setPlanesStatus(s,el){ planesStatusFilter=s; document.querySelectorAll('#planes-status-filters .fc').forEach(b=>b.classList.remove('on')); if(el)el.classList.add('on'); renderPlanes(); }
+
+function renderPlanes(){
+  const sub=document.getElementById('planes-date-sub'); if(!sub)return;
+  const isToday = planesDate===todayStart();
+  sub.textContent = new Date(planesDate).toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'}) + (isToday?' (hoy)':'');
+  const todayBtn=document.getElementById('planes-today-btn'); if(todayBtn) todayBtn.classList.toggle('on',isToday);
+
+  // Filtros de técnico (dinámicos)
+  const tecFiltersEl=document.getElementById('planes-tec-filters');
+  if(tecFiltersEl && !tecFiltersEl.dataset.built){
+    const tecs=getAllTecnicos();
+    window._planesTecList = tecs;
+    tecFiltersEl.innerHTML='<button class="fc on" onclick="setPlanesTec(\'todos\',this)">Todos los técnicos</button>'+tecs.map((t,i)=>'<button class="fc" onclick="setPlanesTecByIndex('+i+',this)">'+shortName(t)+'</button>').join('');
+    tecFiltersEl.dataset.built='1';
+  }
+  // Filtros de estación (dinámicos)
+  const estFiltersEl=document.getElementById('planes-est-filters');
+  if(estFiltersEl && !estFiltersEl.dataset.built){
+    estFiltersEl.innerHTML='<button class="fc on" onclick="setPlanesEst(\'todos\',this)">Todas las estaciones</button>'+ESTACIONES.map((e,i)=>'<button class="fc" onclick="setPlanesEstByIndex('+i+',this)">'+e+'</button>').join('');
+    estFiltersEl.dataset.built='1';
+  }
+
+  // Construir lista de entradas desde la bitácora del día, cruzando con datos vivos del ticket cuando exista
+  let entries = Object.values(planesHistorial||{}).map(h=>{
+    const live = window._tickets.find(t=>(t._key||t.id)===h.ticketKey);
+    return {
+      ticketKey: h.ticketKey, id: h.ticketId, tec: h.tec,
+      est: live?.est||h.est, cat: live?.cat||h.cat, sub: live?.sub||h.sub, urg: live?.urg||h.urg,
+      estado: live?live.estado:'Cerrado', // si el ticket ya no existe en _tickets, asumimos cerrado/archivado
+      ts: live?.ts||h.ts, pin: live?.pin||false, _live: live
+    };
+  });
+
+  if(planesTecFilter!=='todos') entries=entries.filter(e=>e.tec===planesTecFilter);
+  if(planesEstFilter!=='todos') entries=entries.filter(e=>e.est===planesEstFilter);
+  if(planesStatusFilter==='vencido') entries=entries.filter(e=>e._live&&e.estado!=='Cerrado'&&getSLA(e._live).status==='over');
+  else if(planesStatusFilter==='prioridad') entries=entries.filter(e=>e.pin);
+  else if(planesStatusFilter!=='todos') entries=entries.filter(e=>e.estado===planesStatusFilter);
+
+  const c=document.getElementById('planes-list'); if(!c)return;
+  if(entries.length===0){
+    c.innerHTML='<div class="empty"><i class="ti ti-calendar-off"></i><p>Sin tickets planeados para esta fecha con estos filtros.</p></div>';
+    return;
+  }
+
+  // Agrupar por técnico
+  const porTec={};
+  entries.forEach(e=>{ if(!porTec[e.tec]) porTec[e.tec]=[]; porTec[e.tec].push(e); });
+  const tecsOrdenados=Object.keys(porTec).sort();
+
+  c.innerHTML = tecsOrdenados.map(tec=>{
+    const items=porTec[tec];
+    const cards=items.map(e=>{
+      const uc=e.urg==='Alta'?'alta':e.urg==='Media'?'media':'baja';
+      const sla = e._live ? getSLA(e._live) : null;
+      const slaBar = e._live && e.estado!=='Cerrado' ? `<div class="sla-row s-${sla.status}"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${sla.status==='over'?'🔴 Vencido':'⏱ '+sla.label}</span></div>` : '';
+      return `<div class="tc tc-${uc}" onclick="openTicket('${e.ticketKey}')">
+        <div class="tc-top"><span class="tc-folio">${e.pin?'⭐ ':''}${e.id}</span><span class="tc-time">${e.est}</span></div>
+        <div class="tc-tipo">${e.cat}</div><div class="tc-sub">${e.sub}</div>
+        <div class="tc-meta">${urgBadge(e.urg)}${estBadge(e.estado)}</div>${slaBar}
+      </div>`;
+    }).join('');
+    return `<div class="card"><div class="card-title"><i class="ti ti-user"></i>${shortName(tec)} <span style="margin-left:auto;font-weight:700;color:var(--g400)">${items.length}</span></div>${cards}</div>`;
+  }).join('');
 }
 
 function openPassModal(key,nombre){
