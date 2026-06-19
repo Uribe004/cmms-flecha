@@ -263,39 +263,13 @@ textarea{resize:none;min-height:80px}
     <p class="auth-sub">Selecciona tu perfil para continuar</p>
     <div class="fl">
       <label>¿Quién eres?</label>
-      <select id="au">
-        <option value="">— Selecciona —</option>
-        <optgroup label="Dirección">
-          <option value="director">Francisco (Director)</option>
-        </optgroup>
-        <optgroup label="Mantenimiento">
-          <option value="jefe">Santiago Meza — Gerente</option>
-          <option value="tec-armando">Jesús Armando Valladolid</option>
-          <option value="tec-martin">Martin Gonzalez</option>
-          <option value="tec-jose">José Luis Flores</option>
-          <option value="tec-enrique">Enrique Valle</option>
-        </optgroup>
-        <optgroup label="Supervisores">
-          <option value="sup-dayanara">Dayanara Castillo — Zona Norte</option>
-          <option value="sup-juanmanuel">Juan Manuel Osuna — Zona Sur</option>
-          <option value="sup-edgar">Edgar Navarro — Zona Valiente</option>
-        </optgroup>
-        <optgroup label="Estaciones">
-          <option value="est-estadio">Estadio</option>
-          <option value="est-petrolera">Petrolera</option>
-          <option value="est-sangerman">San Germán</option>
-          <option value="est-valiente">Valiente</option>
-          <option value="est-corsario">Corsario</option>
-          <option value="est-lomalinda">Loma Linda</option>
-          <option value="est-mg">MG</option>
-          <option value="est-sancarlos">San Carlos</option>
-          <option value="est-batuecas">Batuecas</option>
-          <option value="est-arcaza">Arcaza</option>
-          <option value="est-miramar">Miramar</option>
-        </optgroup>
-      </select>
+      <select id="au"><option value="">— Selecciona —</option></select>
     </div>
-    <p class="auth-err" id="aerr">Selecciona tu perfil.</p>
+    <div class="fl">
+      <label>Contraseña</label>
+      <input type="password" id="au-pass" placeholder="Contraseña" autocomplete="current-password">
+    </div>
+    <p class="auth-err" id="aerr">Selecciona tu perfil e ingresa tu contraseña.</p>
     <button class="btn-main" onclick="doLogin()"><i class="ti ti-login"></i>Entrar</button>
   </div>
 </div>
@@ -465,6 +439,14 @@ textarea{resize:none;min-height:80px}
       <div id="cfg-list"></div>
     </div>
 
+    <!-- USUARIOS (director/jefe) -->
+    <div class="view" id="v-usuarios">
+      <div class="sh">
+        <div><div class="sh-title">Usuarios</div><div class="sh-sub">Perfiles y contraseñas de acceso</div></div>
+      </div>
+      <div id="usuarios-list"></div>
+    </div>
+
   </div>
   <nav class="bnav" id="bnav"></nav>
 </div>
@@ -509,6 +491,17 @@ textarea{resize:none;min-height:80px}
     <button class="btn-main" onclick="saveNewSub()"><i class="ti ti-check"></i>Guardar</button>
   </div>
 </div>
+<div class="overlay" id="m-pass" onclick="closeModal('m-pass')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <p class="modal-title">Cambiar contraseña</p>
+    <p style="font-size:13px;color:var(--g500);margin-bottom:14px">Usuario: <strong id="pass-username"></strong></p>
+    <div class="fg"><label>Nueva contraseña <span>*</span></label><input type="password" id="pass-new" placeholder="Mínimo 4 caracteres" autocomplete="new-password"></div>
+    <div class="fg"><label>Confirmar contraseña <span>*</span></label><input type="password" id="pass-confirm" placeholder="Repite la contraseña" autocomplete="new-password"></div>
+    <p style="font-size:12px;color:var(--red);margin-bottom:10px;display:none" id="pass-err"></p>
+    <button class="btn-main" onclick="savePass()"><i class="ti ti-check"></i>Guardar contraseña</button>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -546,6 +539,20 @@ onValue(ref(db,'cats'),(snap)=>{
   if(window._CU) populateSelects();
 },{onlyOnce:false});
 
+// Usuarios (login + nombres)
+onValue(ref(db,'usuarios'),(snap)=>{
+  if(snap.exists()){
+    window._usuarios = snap.val();
+  } else {
+    window._usuarios = JSON.parse(JSON.stringify(window._DEFAULT_USUARIOS));
+    set(ref(db,'usuarios'), window._usuarios);
+  }
+  window._usuariosReady = true;
+  // Mantener UNAMES sincronizado (clave usada en todo el resto del código)
+  Object.keys(window._usuarios).forEach(k=>{ UNAMES[k]=window._usuarios[k].nombre; });
+  if(window._authBooted) populateLoginSelect();
+},{onlyOnce:false});
+
 // Tickets realtime
 onValue(ref(db,'tickets'),(snap)=>{
   window._tickets = snap.exists() ? Object.entries(snap.val()).map(([k,v])=>({...v,_key:k})) : [];
@@ -555,7 +562,29 @@ onValue(ref(db,'tickets'),(snap)=>{
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────
-const UNAMES = {director:'Francisco',jefe:'Santiago Meza','tec-armando':'Jesús Armando Valladolid','tec-martin':'Martin Gonzalez','tec-jose':'José Luis Flores','tec-enrique':'Enrique Valle','est-estadio':'Estadio','est-petrolera':'Petrolera','est-sangerman':'San Germán','est-valiente':'Valiente','est-corsario':'Corsario','est-lomalinda':'Loma Linda','est-mg':'MG','est-sancarlos':'San Carlos','est-batuecas':'Batuecas','est-arcaza':'Arcaza','est-miramar':'Miramar','sup-dayanara':'Dayanara Castillo','sup-juanmanuel':'Juan Manuel Osuna','sup-edgar':'Edgar Navarro'};
+window._DEFAULT_USUARIOS = {
+  'director':{nombre:'Francisco',rol:'director',pass:'12345'},
+  'jefe':{nombre:'Santiago Meza',rol:'jefe',pass:'12345'},
+  'tec-armando':{nombre:'Jesús Armando Valladolid',rol:'tec',pass:'12345'},
+  'tec-martin':{nombre:'Martin Gonzalez',rol:'tec',pass:'12345'},
+  'tec-jose':{nombre:'José Luis Flores',rol:'tec',pass:'12345'},
+  'tec-enrique':{nombre:'Enrique Valle',rol:'tec',pass:'12345'},
+  'sup-dayanara':{nombre:'Dayanara Castillo',rol:'sup',pass:'12345'},
+  'sup-juanmanuel':{nombre:'Juan Manuel Osuna',rol:'sup',pass:'12345'},
+  'sup-edgar':{nombre:'Edgar Navarro',rol:'sup',pass:'12345'},
+  'est-estadio':{nombre:'Estadio',rol:'est',pass:'12345'},
+  'est-petrolera':{nombre:'Petrolera',rol:'est',pass:'12345'},
+  'est-sangerman':{nombre:'San Germán',rol:'est',pass:'12345'},
+  'est-valiente':{nombre:'Valiente',rol:'est',pass:'12345'},
+  'est-corsario':{nombre:'Corsario',rol:'est',pass:'12345'},
+  'est-lomalinda':{nombre:'Loma Linda',rol:'est',pass:'12345'},
+  'est-mg':{nombre:'MG',rol:'est',pass:'12345'},
+  'est-sancarlos':{nombre:'San Carlos',rol:'est',pass:'12345'},
+  'est-batuecas':{nombre:'Batuecas',rol:'est',pass:'12345'},
+  'est-arcaza':{nombre:'Arcaza',rol:'est',pass:'12345'},
+  'est-miramar':{nombre:'Miramar',rol:'est',pass:'12345'},
+};
+let UNAMES = {director:'Francisco',jefe:'Santiago Meza','tec-armando':'Jesús Armando Valladolid','tec-martin':'Martin Gonzalez','tec-jose':'José Luis Flores','tec-enrique':'Enrique Valle','est-estadio':'Estadio','est-petrolera':'Petrolera','est-sangerman':'San Germán','est-valiente':'Valiente','est-corsario':'Corsario','est-lomalinda':'Loma Linda','est-mg':'MG','est-sancarlos':'San Carlos','est-batuecas':'Batuecas','est-arcaza':'Arcaza','est-miramar':'Miramar','sup-dayanara':'Dayanara Castillo','sup-juanmanuel':'Juan Manuel Osuna','sup-edgar':'Edgar Navarro'};
 const SUP_ZONES = {'sup-dayanara':['San Carlos','San Germán','MG','Loma Linda','Miramar'],'sup-juanmanuel':['Petrolera','Arcaza','Corsario','Estadio','Batuecas'],'sup-edgar':['Valiente']};
 const TEC_KEYS = ['tec-armando','tec-martin','tec-jose','tec-enrique','jefe'];
 const TEC_MAP = {'tec-armando':'Jesús Armando Valladolid','tec-martin':'Martin Gonzalez','tec-jose':'José Luis Flores','tec-enrique':'Enrique Valle','jefe':'Santiago Meza'};
@@ -689,6 +718,7 @@ function _refreshCurrentView(){
   if(vid==='v-plan') renderPlan();
   if(vid==='v-est') renderEst();
   if(vid==='v-mi-dash') renderMiDash();
+  if(vid==='v-usuarios') renderUsuarios();
   updateBadge();
 }
 
@@ -706,10 +736,37 @@ function sortTickets(list){
 }
 
 // ── AUTH ──────────────────────────────────────────────────
+function populateLoginSelect(){
+  const sel=document.getElementById('au'); if(!sel||!window._usuarios)return;
+  const prevVal=sel.value;
+  const groups={director:{label:'Dirección',items:[]},jefe:{label:'Mantenimiento',items:[]},tec:{label:'Mantenimiento',items:[]},sup:{label:'Supervisores',items:[]},est:{label:'Estaciones',items:[]}};
+  Object.entries(window._usuarios).forEach(([key,u])=>{
+    const g=groups[u.rol]||groups[key==='director'?'director':'est'];
+    if(g) g.items.push({key,nombre:u.nombre});
+  });
+  let html='<option value="">— Selecciona —</option>';
+  const order=['director','jefe','tec','sup','est'];
+  const seenLabels=new Set();
+  order.forEach(roleKey=>{
+    const g=groups[roleKey]; if(!g||!g.items.length)return;
+    if(seenLabels.has(g.label))return; // jefe+tec comparten label 'Mantenimiento', combinar
+    seenLabels.add(g.label);
+    let items=[...g.items];
+    if(roleKey==='jefe') items=items.concat(groups.tec.items);
+    html+=`<optgroup label="${g.label}">`+items.map(it=>`<option value="${it.key}">${it.nombre}</option>`).join('')+`</optgroup>`;
+  });
+  sel.innerHTML=html;
+  if(prevVal) sel.value=prevVal;
+}
+
 function doLogin(){
   const u = document.getElementById('au').value;
-  if(!u){ document.getElementById('aerr').style.display='block'; return; }
-  document.getElementById('aerr').style.display='none';
+  const pass = document.getElementById('au-pass').value;
+  const errEl = document.getElementById('aerr');
+  if(!u||!pass){ errEl.textContent='Selecciona tu perfil e ingresa tu contraseña.'; errEl.style.display='block'; return; }
+  const usr = (window._usuarios||{})[u];
+  if(!usr || usr.pass!==pass){ errEl.textContent='Contraseña incorrecta.'; errEl.style.display='block'; return; }
+  errEl.style.display='none';
   window._CU=u; window._CR=getRole(u);
   try{ sessionStorage.setItem('fg_u',u); }catch(e){}
   startApp();
@@ -745,7 +802,7 @@ function presetEst(){
 function buildNav(){
   const cr = window._CR;
   let items = [];
-  if(isMgr()) items=[{i:'ti-layout-dashboard',l:'Dashboard',v:'dash'},{i:'ti-ticket',l:'Tickets',v:'tickets'},{i:'ti-circle-plus',l:'Nuevo',v:'rep'},{i:'ti-settings',l:'Config',v:'cfg'}];
+  if(isMgr()) items=[{i:'ti-layout-dashboard',l:'Dashboard',v:'dash'},{i:'ti-ticket',l:'Tickets',v:'tickets'},{i:'ti-circle-plus',l:'Nuevo',v:'rep'},{i:'ti-settings',l:'Config',v:'cfg'},{i:'ti-users-group',l:'Usuarios',v:'usuarios'}];
   else if(cr==='sup') items=[{i:'ti-layout-dashboard',l:'Dashboard',v:'dash'},{i:'ti-ticket',l:'Tickets',v:'tickets'}];
   else if(cr==='tec') items=[{i:'ti-clipboard-check',l:'Plan del día',v:'plan'},{i:'ti-ticket',l:'Mis tickets',v:'mis'},{i:'ti-chart-bar',l:'Mi desempeño',v:'mi-dash'}];
   else items=[{i:'ti-circle-plus',l:'Reportar',v:'rep'},{i:'ti-list',l:'Mis tickets',v:'est'}];
@@ -765,6 +822,7 @@ function navTo(v,el){
   if(v==='mis') renderMis();
   if(v==='plan') renderPlan();
   if(v==='cfg') renderCfg();
+  if(v==='usuarios') renderUsuarios();
   if(v==='est') renderEst();
   if(v==='mi-dash') renderMiDash();
 }
@@ -1321,6 +1379,53 @@ function openAddSub(catId,catName){ addSubCatId=catId;nsUrgSel=''; document.getE
 function setNsUrg(u){ nsUrgSel=u; ['alta','media','baja'].forEach(x=>{const b=document.getElementById('nsu-'+x);if(b)b.className='ub';}); const sel=document.getElementById('nsu-'+u.toLowerCase());if(sel)sel.className='ub sel-'+u.toLowerCase(); }
 function saveNewSub(){ const name=document.getElementById('ns-name').value.trim();if(!name){showToast('Escribe un nombre');return;} if(!nsUrgSel){showToast('Selecciona la urgencia');return;} const c=(window._cats||[]).find(x=>x.id===addSubCatId);if(!c)return; c.subs.push({id:'s'+Date.now(),name,urg:nsUrgSel,active:true}); fbSet('cats',window._cats); closeModal('m-addsub');renderCfg();populateSelects(); showToast('Subcategoría "'+name+'" agregada'); }
 
+// ── USUARIOS ──────────────────────────────────────────────
+let passUserKey='';
+const ROL_LABELS={director:'Dirección',jefe:'Mantenimiento',tec:'Mantenimiento',sup:'Supervisores',est:'Estaciones'};
+const ROL_ORDER=['director','jefe','tec','sup','est'];
+
+function renderUsuarios(){
+  const c=document.getElementById('usuarios-list'); if(!c)return;
+  const u=window._usuarios||{};
+  const groups={};
+  Object.entries(u).forEach(([key,info])=>{
+    const lbl=ROL_LABELS[info.rol]||'Otros';
+    if(!groups[lbl]) groups[lbl]=[];
+    groups[lbl].push({key,...info});
+  });
+  const labelOrder=['Dirección','Mantenimiento','Supervisores','Estaciones'];
+  c.innerHTML=labelOrder.filter(l=>groups[l]).map(label=>{
+    const rows=groups[label].map(item=>`
+      <div class="cfg-sub-row">
+        <span class="cfg-sub-name">${item.nombre}</span>
+        <button class="bs bs-out" style="padding:6px 10px;font-size:12px" onclick="openPassModal('${item.key}','${item.nombre.replace(/'/g,"\\'")}')"><i class="ti ti-key"></i>Cambiar contraseña</button>
+      </div>`).join('');
+    return `<div class="cfg-cat"><div class="cfg-cat-hdr" style="cursor:default"><span class="cfg-cat-name">${label}</span></div><div class="cfg-subs" style="display:block">${rows}</div></div>`;
+  }).join('');
+}
+
+function openPassModal(key,nombre){
+  passUserKey=key;
+  document.getElementById('pass-username').textContent=nombre;
+  document.getElementById('pass-new').value='';
+  document.getElementById('pass-confirm').value='';
+  document.getElementById('pass-err').style.display='none';
+  openModal('m-pass');
+}
+
+function savePass(){
+  const p1=document.getElementById('pass-new').value;
+  const p2=document.getElementById('pass-confirm').value;
+  const errEl=document.getElementById('pass-err');
+  if(!p1||p1.length<4){ errEl.textContent='La contraseña debe tener al menos 4 caracteres.'; errEl.style.display='block'; return; }
+  if(p1!==p2){ errEl.textContent='Las contraseñas no coinciden.'; errEl.style.display='block'; return; }
+  if(!window._usuarios||!window._usuarios[passUserKey]) return;
+  window._usuarios[passUserKey].pass=p1;
+  fbSet('usuarios',window._usuarios);
+  closeModal('m-pass');
+  showToast('✅ Contraseña actualizada');
+}
+
 // ── MODAL / TOAST ─────────────────────────────────────────
 function openModal(id){ document.getElementById(id).classList.add('on'); }
 function closeModal(id){ document.getElementById(id).classList.remove('on'); }
@@ -1328,12 +1433,13 @@ function showToast(msg){ const t=document.getElementById('toast');t.textContent=
 
 // ── AUTO RESUME ───────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{
+  window._authBooted = true;
   try{
     const s=sessionStorage.getItem('fg_u');
-    if(s&&UNAMES[s]){ window._CU=s; window._CR=getRole(s); document.getElementById('au').value=s; }
     const check=setInterval(()=>{
-      if(window._fbReady){ clearInterval(check);
-        if(window._CU) startApp();
+      if(window._fbReady&&window._usuariosReady){ clearInterval(check);
+        populateLoginSelect();
+        if(s&&UNAMES[s]){ window._CU=s; window._CR=getRole(s); document.getElementById('au').value=s; startApp(); }
         else{ document.getElementById('loading-screen').style.display='none'; document.getElementById('auth').style.display='flex'; }
       }
     },100);
