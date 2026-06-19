@@ -443,6 +443,7 @@ textarea{resize:none;min-height:80px}
     <div class="view" id="v-usuarios">
       <div class="sh">
         <div><div class="sh-title">Usuarios</div><div class="sh-sub">Perfiles y contraseñas de acceso</div></div>
+        <button class="bs bs-red" onclick="openModal('m-addtec')"><i class="ti ti-plus"></i>Técnico</button>
       </div>
       <div id="usuarios-list"></div>
     </div>
@@ -500,6 +501,15 @@ textarea{resize:none;min-height:80px}
     <div class="fg"><label>Confirmar contraseña <span>*</span></label><input type="password" id="pass-confirm" placeholder="Repite la contraseña" autocomplete="new-password"></div>
     <p style="font-size:12px;color:var(--red);margin-bottom:10px;display:none" id="pass-err"></p>
     <button class="btn-main" onclick="savePass()"><i class="ti ti-check"></i>Guardar contraseña</button>
+  </div>
+</div>
+<div class="overlay" id="m-addtec" onclick="closeModal('m-addtec')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <p class="modal-title">Agregar técnico</p>
+    <div class="fg"><label>Nombre completo <span>*</span></label><input type="text" id="nt-nombre" placeholder="Ej. Carlos Mendoza"></div>
+    <p style="font-size:12px;color:var(--g500);margin-bottom:14px">Se creará con contraseña inicial <strong>12345</strong>. El técnico podrá usarla para entrar; tú puedes cambiarla después desde esta misma pantalla.</p>
+    <button class="btn-main" onclick="saveNewTec()"><i class="ti ti-check"></i>Agregar técnico</button>
   </div>
 </div>
 
@@ -586,9 +596,11 @@ window._DEFAULT_USUARIOS = {
 };
 let UNAMES = {director:'Francisco',jefe:'Santiago Meza','tec-armando':'Jesús Armando Valladolid','tec-martin':'Martin Gonzalez','tec-jose':'José Luis Flores','tec-enrique':'Enrique Valle','est-estadio':'Estadio','est-petrolera':'Petrolera','est-sangerman':'San Germán','est-valiente':'Valiente','est-corsario':'Corsario','est-lomalinda':'Loma Linda','est-mg':'MG','est-sancarlos':'San Carlos','est-batuecas':'Batuecas','est-arcaza':'Arcaza','est-miramar':'Miramar','sup-dayanara':'Dayanara Castillo','sup-juanmanuel':'Juan Manuel Osuna','sup-edgar':'Edgar Navarro'};
 const SUP_ZONES = {'sup-dayanara':['San Carlos','San Germán','MG','Loma Linda','Miramar'],'sup-juanmanuel':['Petrolera','Arcaza','Corsario','Estadio','Batuecas'],'sup-edgar':['Valiente']};
-const TEC_KEYS = ['tec-armando','tec-martin','tec-jose','tec-enrique','jefe'];
-const TEC_MAP = {'tec-armando':'Jesús Armando Valladolid','tec-martin':'Martin Gonzalez','tec-jose':'José Luis Flores','tec-enrique':'Enrique Valle','jefe':'Santiago Meza'};
-const ALL_TECNICOS = ['Jesús Armando Valladolid','Martin Gonzalez','José Luis Flores','Enrique Valle','Santiago Meza'];
+const TEC_MAP = UNAMES; // alias: TEC_MAP[clave] resuelve igual que UNAMES[clave], se mantiene sincronizado
+function getAllTecnicos(){
+  const u=window._usuarios; if(!u) return ['Jesús Armando Valladolid','Martin Gonzalez','José Luis Flores','Enrique Valle','Santiago Meza'];
+  return Object.entries(u).filter(([k,v])=>(v.rol==='tec'||v.rol==='jefe')&&v.activo!==false).map(([k,v])=>v.nombre);
+}
 const EST_MAP = {'est-estadio':'Estadio','est-petrolera':'Petrolera','est-sangerman':'San Germán','est-valiente':'Valiente','est-corsario':'Corsario','est-lomalinda':'Loma Linda','est-mg':'MG','est-sancarlos':'San Carlos','est-batuecas':'Batuecas','est-arcaza':'Arcaza','est-miramar':'Miramar'};
 const ESTACIONES = ['Estadio','Petrolera','San Germán','Valiente','Corsario','Loma Linda','MG','San Carlos','Batuecas','Arcaza','Miramar'];
 const SLA_HRS = {Alta:6,Media:48,Baja:120};
@@ -741,6 +753,7 @@ function populateLoginSelect(){
   const prevVal=sel.value;
   const groups={director:{label:'Dirección',items:[]},jefe:{label:'Mantenimiento',items:[]},tec:{label:'Mantenimiento',items:[]},sup:{label:'Supervisores',items:[]},est:{label:'Estaciones',items:[]}};
   Object.entries(window._usuarios).forEach(([key,u])=>{
+    if(u.activo===false) return;
     const g=groups[u.rol]||groups[key==='director'?'director':'est'];
     if(g) g.items.push({key,nombre:u.nombre});
   });
@@ -766,6 +779,7 @@ function doLogin(){
   if(!u||!pass){ errEl.textContent='Selecciona tu perfil e ingresa tu contraseña.'; errEl.style.display='block'; return; }
   const usr = (window._usuarios||{})[u];
   if(!usr || usr.pass!==pass){ errEl.textContent='Contraseña incorrecta.'; errEl.style.display='block'; return; }
+  if(usr.activo===false){ errEl.textContent='Este usuario fue dado de baja. Contacta a tu gerente.'; errEl.style.display='block'; return; }
   errEl.style.display='none';
   window._CU=u; window._CR=getRole(u);
   try{ sessionStorage.setItem('fg_u',u); }catch(e){}
@@ -947,7 +961,7 @@ function renderDash(){
 
   // Tabla técnicos
   const hoy = todayStart();
-  document.getElementById('tbody-tec').innerHTML=ALL_TECNICOS.map(tec=>{
+  document.getElementById('tbody-tec').innerHTML=getAllTecnicos().map(tec=>{
     const planHoy = ft.filter(t=>t.tec===tec&&t.planDia&&t.planDiaFecha>=hoy&&t.estado!=='Cerrado').length;
     const asig = ft.filter(t=>t.tec===tec&&t.estado!=='Cerrado').length;
     const cerr = inPeriod.filter(t=>t.tec===tec&&t.estado==='Cerrado').length;
@@ -1015,7 +1029,7 @@ function openTicket(key){
   if(canManage&&t.estado!=='Cerrado'){
     assignBlock=`<div class="sdiv">Gestión del ticket</div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <select id="asel" style="flex:1"><option value="">— Asignar técnico —</option>${ALL_TECNICOS.map(tc=>`<option ${t.tec===tc?'selected':''}>${tc}</option>`).join('')}</select>
+      <select id="asel" style="flex:1"><option value="">— Asignar técnico —</option>${getAllTecnicos().map(tc=>`<option ${t.tec===tc?'selected':''}>${tc}</option>`).join('')}</select>
       <button class="bs bs-red" onclick="assignTec('${key}')"><i class="ti ti-check"></i>Asignar</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
@@ -1395,13 +1409,44 @@ function renderUsuarios(){
   });
   const labelOrder=['Dirección','Mantenimiento','Supervisores','Estaciones'];
   c.innerHTML=labelOrder.filter(l=>groups[l]).map(label=>{
-    const rows=groups[label].map(item=>`
-      <div class="cfg-sub-row">
-        <span class="cfg-sub-name">${item.nombre}</span>
-        <button class="bs bs-out" style="padding:6px 10px;font-size:12px" onclick="openPassModal('${item.key}','${item.nombre.replace(/'/g,"\\'")}')"><i class="ti ti-key"></i>Cambiar contraseña</button>
-      </div>`).join('');
+    const rows=groups[label].map(item=>{
+      const isTec = item.rol==='tec';
+      const inactivo = item.activo===false;
+      const nameStyle = inactivo ? 'text-decoration:line-through;color:var(--g400)' : '';
+      const toggleBtn = isTec
+        ? `<button class="bs ${inactivo?'bs-green':'bs-out'}" style="padding:6px 10px;font-size:12px" onclick="toggleTecActivo('${item.key}')"><i class="ti ${inactivo?'ti-rotate':'ti-user-off'}"></i>${inactivo?'Reactivar':'Dar de baja'}</button>`
+        : '';
+      return `<div class="cfg-sub-row">
+        <span class="cfg-sub-name" style="${nameStyle}">${item.nombre}${inactivo?' <span class="badge b-gray">Inactivo</span>':''}</span>
+        ${toggleBtn}
+        <button class="bs bs-out" style="padding:6px 10px;font-size:12px" onclick="openPassModal('${item.key}','${item.nombre.replace(/'/g,"\\'")}')"><i class="ti ti-key"></i>Contraseña</button>
+      </div>`;
+    }).join('');
     return `<div class="cfg-cat"><div class="cfg-cat-hdr" style="cursor:default"><span class="cfg-cat-name">${label}</span></div><div class="cfg-subs" style="display:block">${rows}</div></div>`;
   }).join('');
+}
+
+function saveNewTec(){
+  const nombre=document.getElementById('nt-nombre').value.trim();
+  if(!nombre){ showToast('Escribe el nombre del técnico'); return; }
+  if(!window._usuarios) return;
+  const key='tec-'+Date.now();
+  window._usuarios[key]={nombre,rol:'tec',pass:'12345',activo:true};
+  fbSet('usuarios',window._usuarios);
+  UNAMES[key]=nombre;
+  document.getElementById('nt-nombre').value='';
+  closeModal('m-addtec');
+  renderUsuarios();
+  showToast('✅ Técnico "'+nombre+'" agregado con contraseña inicial 12345');
+}
+
+function toggleTecActivo(key){
+  if(!window._usuarios||!window._usuarios[key]) return;
+  const actual = window._usuarios[key].activo!==false;
+  window._usuarios[key].activo = !actual;
+  fbSet('usuarios',window._usuarios);
+  renderUsuarios();
+  showToast(actual?'Técnico dado de baja':'Técnico reactivado');
 }
 
 function openPassModal(key,nombre){
