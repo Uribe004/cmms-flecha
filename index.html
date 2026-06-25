@@ -358,6 +358,20 @@ textarea{resize:none;min-height:80px}
         <button class="fc" onclick="filterT('vencido',this)">🔴 Vencidos</button>
         <button class="fc" onclick="filterT('prioridad',this)">⭐ Prioridad</button>
       </div>
+      <div class="frow" id="t-est-filters">
+        <button class="fc on" onclick="filterTEst('todas',this)">Todas las estaciones</button>
+        <button class="fc" onclick="filterTEst('Estadio',this)">Estadio</button>
+        <button class="fc" onclick="filterTEst('Petrolera',this)">Petrolera</button>
+        <button class="fc" onclick="filterTEst('San Germán',this)">San Germán</button>
+        <button class="fc" onclick="filterTEst('Valiente',this)">Valiente</button>
+        <button class="fc" onclick="filterTEst('Corsario',this)">Corsario</button>
+        <button class="fc" onclick="filterTEst('Loma Linda',this)">Loma Linda</button>
+        <button class="fc" onclick="filterTEst('MG',this)">MG</button>
+        <button class="fc" onclick="filterTEst('San Carlos',this)">San Carlos</button>
+        <button class="fc" onclick="filterTEst('Batuecas',this)">Batuecas</button>
+        <button class="fc" onclick="filterTEst('Arcaza',this)">Arcaza</button>
+        <button class="fc" onclick="filterTEst('Miramar',this)">Miramar</button>
+      </div>
       <div id="tlist"></div>
     </div>
 
@@ -684,6 +698,7 @@ window._tickets = [];
 window._cats = window._DEFAULT_CATS;
 
 let tFilter = 'todos';
+let tEstFilter = 'todas';
 let dashFilter = 'todos';
 let dashPeriod = 'mes';
 let miDashPeriod = 'mes';
@@ -978,22 +993,37 @@ function renderDash(){
   const aTiempo = cerrados.filter(t=>{const max=(SLA_HRS[t.urg]||24)*3600000;return(t.tsC-t.ts)<=max;}).length;
   const pctSLA = cerrados.length>0 ? Math.round(aTiempo/cerrados.length*100) : 0;
 
+  const totalReal = inPeriod.length;
+  const conTec = inPeriod.filter(t=>t.tec&&t.estado!=='Cerrado').length;
+  const sinTec = inPeriod.filter(t=>!t.tec&&t.estado!=='Cerrado').length;
+
   document.getElementById('kpi-grid').innerHTML=`
-    <div class="kpi kpi-red" onclick="goToTickets('Abierto')"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-pct" style="color:var(--red)">${pct(ab,total)}%</div><div class="kpi-sub">del total del período</div></div>
-    <div class="kpi kpi-amber" onclick="goToTickets('proceso')"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-pct" style="color:var(--amber)">${pct(pr,total)}%</div><div class="kpi-sub">del total del período</div></div>
-    <div class="kpi kpi-green" onclick="goToTickets('Cerrado')"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div><div class="kpi-pct" style="color:var(--green)">${pct(ce,total)}%</div><div class="kpi-sub">del total del período</div></div>
-    <div class="kpi kpi-blue" onclick="goToTickets('vencido')"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-pct" style="color:var(--blue)">${pct(ve,total)}%</div><div class="kpi-sub">superaron SLA</div></div>
-    <div class="kpi kpi-purple" onclick="goToTickets('Esperando Material')"><div class="kpi-lbl">Esp. material</div><div class="kpi-val">${em}</div><div class="kpi-pct" style="color:var(--purple)">${pct(em,total)}%</div><div class="kpi-sub">del total</div></div>
+    <div class="kpi kpi-blue"><div class="kpi-lbl">Total período</div><div class="kpi-val">${totalReal}</div><div class="kpi-pct" style="color:var(--blue)">100%</div><div class="kpi-sub">todos los estados</div></div>
+    <div class="kpi kpi-green" onclick="goToTickets('Asignado')"><div class="kpi-lbl">Asignados</div><div class="kpi-val">${conTec}</div><div class="kpi-pct" style="color:var(--green)">${pct(conTec,totalReal||1)}%</div><div class="kpi-sub">tienen técnico activo</div></div>
+    <div class="kpi kpi-red" onclick="goToTickets('Abierto')"><div class="kpi-lbl">Sin asignar</div><div class="kpi-val">${sinTec}</div><div class="kpi-pct" style="color:var(--red)">${pct(sinTec,totalReal||1)}%</div><div class="kpi-sub">sin técnico asignado</div></div>
+    <div class="kpi kpi-blue" onclick="goToTickets('Abierto')"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-pct" style="color:var(--blue)">${pct(ab,totalReal||1)}%</div><div class="kpi-sub">del total del período</div></div>
+    <div class="kpi kpi-amber" onclick="goToTickets('proceso')"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-pct" style="color:var(--amber)">${pct(pr,totalReal||1)}%</div><div class="kpi-sub">del total del período</div></div>
+    <div class="kpi kpi-green" onclick="goToTickets('Cerrado')"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div><div class="kpi-pct" style="color:var(--green)">${pct(ce,totalReal||1)}%</div><div class="kpi-sub">del total del período</div></div>
+    <div class="kpi kpi-red" onclick="goToTickets('vencido')"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-pct" style="color:var(--red)">${pct(ve,totalReal||1)}%</div><div class="kpi-sub">superaron SLA</div></div>
+    <div class="kpi kpi-purple" onclick="goToTickets('Esperando Material')"><div class="kpi-lbl">Esp. material</div><div class="kpi-val">${em}</div><div class="kpi-pct" style="color:var(--purple)">${pct(em,totalReal||1)}%</div><div class="kpi-sub">del total</div></div>
     <div class="kpi kpi-green"><div class="kpi-lbl">% Cumplimiento SLA</div><div class="kpi-val">${pctSLA}%</div><div class="kpi-pct" style="color:var(--green)">${aTiempo}/${cerrados.length}</div><div class="kpi-sub">cerrados a tiempo</div></div>`;
 
   // Tiempos promedio
   const avgC = cerrados.length ? fmtHrs(cerrados.reduce((s,t)=>s+(t.tsC-t.ts),0)/cerrados.length) : '—';
   const cAsig = cerrados.filter(t=>t.tsA&&t.tsC);
   const avgA = cAsig.length ? fmtHrs(cAsig.reduce((s,t)=>s+(t.tsC-t.tsA),0)/cAsig.length) : '—';
+
+  // Tiempo promedio de asignación de Santiago (solo para director)
+  const stiagnoName = 'Santiago Meza';
+  const ticketsParaAsignar = inPeriod.filter(t=>t.tsA&&t.ts);
+  // Todos los tickets del período que fueron asignados — Santiago es quien asigna, independiente del técnico asignado
+  const avgSantiagoAsig = ticketsParaAsignar.length ? fmtHrs(ticketsParaAsignar.reduce((s,t)=>s+(t.tsA-t.ts),0)/ticketsParaAsignar.length) : '—';
+  const santiagoBlock = window._CR==='director' ? `<div style="flex:1;padding:10px;text-align:center;border-left:2px solid var(--blue);background:var(--blue-l)"><div style="font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Prom. asignación (Santiago)</div><div style="font-size:18px;font-weight:800;color:var(--blue)">${avgSantiagoAsig}</div><div style="font-size:9px;color:var(--g500);margin-top:2px">${ticketsParaAsignar.length} tickets con tsA</div></div>` : '';
+
   document.getElementById('dash-avgs').innerHTML=`
     <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Desde creación</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgC}</div></div>
     <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Desde asignación</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgA}</div></div>
-    <div style="flex:1;padding:10px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Total período</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${inPeriod.length}</div></div>`;
+    <div style="flex:1;padding:10px;text-align:center${window._CR==='director'?';border-right:1px solid var(--g200)':''}"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Total período</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${inPeriod.length}</div></div>${santiagoBlock}`;
 
   // Bar estaciones
   if(dashFilter==='tec'){
@@ -1028,19 +1058,64 @@ function renderDash(){
 
 // ── TICKET LIST ───────────────────────────────────────────
 function renderTickets(){
-  let list=[...window._tickets];
-  if(window._CR==='sup'){const z=SUP_ZONES[window._CU]||[];list=list.filter(t=>z.includes(t.est));}
-  const prevMonth = getPeriodRange('mes-ant');
+  // Base completa del rol (supervisor ve solo su zona)
+  let base=[...window._tickets];
+  if(window._CR==='sup'){const z=SUP_ZONES[window._CU]||[];base=base.filter(t=>z.includes(t.est));}
+
   const mesActStart = getPeriodRange('mes')[0];
-  if(tFilter==='vencido') list=list.filter(t=>t.estado!=='Cerrado'&&getSLA(t).status==='over');
-  else if(tFilter==='prioridad') list=list.filter(t=>t.pin);
-  else if(tFilter==='proceso') list=list.filter(t=>['En Proceso','Asignado','Esperando Material'].includes(t.estado));
-  else if(tFilter!=='todos') list=list.filter(t=>t.estado===tFilter);
+
+  // Base filtrada por estacion (para calcular conteos de estado)
+  const baseByEst = tEstFilter==='todas' ? base : base.filter(t=>t.est===tEstFilter);
+  // Base filtrada por estado (para calcular conteos de estacion)
+  const baseByStatus = applyStatusFilter(base, tFilter);
+
+  // Actualizar conteos en filtros de estado
+  const statusCounts = {
+    todos: baseByEst.length,
+    Abierto: baseByEst.filter(t=>t.estado==='Abierto').length,
+    Asignado: baseByEst.filter(t=>t.estado==='Asignado').length,
+    'En Proceso': baseByEst.filter(t=>t.estado==='En Proceso').length,
+    'Esperando Material': baseByEst.filter(t=>t.estado==='Esperando Material').length,
+    Cerrado: baseByEst.filter(t=>t.estado==='Cerrado').length,
+    vencido: baseByEst.filter(t=>t.estado!=='Cerrado'&&getSLA(t).status==='over').length,
+    prioridad: baseByEst.filter(t=>t.pin).length,
+  };
+  const statusLabels = {todos:'Todos',Abierto:'Abiertos',Asignado:'Asignados','En Proceso':'En proceso','Esperando Material':'Esp. material',Cerrado:'Cerrados',vencido:'🔴 Vencidos',prioridad:'⭐ Prioridad'};
+  document.querySelectorAll('#t-filters .fc').forEach(btn=>{
+    const oc=btn.getAttribute('onclick')||'';
+    const m=oc.match(/filterT\('([^']+)'/);
+    if(m){const key=m[1]; const n=statusCounts[key]; if(n!==undefined) btn.textContent=statusLabels[key]+' ('+n+')';}
+  });
+
+  // Actualizar conteos en filtros de estacion
+  document.querySelectorAll('#t-est-filters .fc').forEach(btn=>{
+    const oc=btn.getAttribute('onclick')||'';
+    const m=oc.match(/filterTEst\('([^']+)'/);
+    if(m){
+      const key=m[1];
+      const n = key==='todas' ? baseByStatus.length : baseByStatus.filter(t=>t.est===key).length;
+      const label = key==='todas'?'Todas':key;
+      btn.textContent=label+' ('+n+')';
+    }
+  });
+
+  // Lista final con ambos filtros aplicados
+  let list = applyStatusFilter(baseByEst, tFilter);
   sortTickets(list);
   const el=document.getElementById('tcount'); if(el)el.textContent=list.length+' ticket'+(list.length!==1?'s':'');
   const c=document.getElementById('tlist'); if(!c)return;
   c.innerHTML=list.length?list.map(t=>ticketCard(t,mesActStart)).join(''):'<div class="empty"><i class="ti ti-circle-check"></i><p>Sin tickets en esta categoría</p></div>';
 }
+
+function applyStatusFilter(list, f){
+  if(f==='vencido') return list.filter(t=>t.estado!=='Cerrado'&&getSLA(t).status==='over');
+  if(f==='prioridad') return list.filter(t=>t.pin);
+  if(f==='proceso') return list.filter(t=>['En Proceso','Asignado','Esperando Material'].includes(t.estado));
+  if(f!=='todos') return list.filter(t=>t.estado===f);
+  return list;
+}
+
+function filterTEst(e,el){ tEstFilter=e; document.querySelectorAll('#t-est-filters .fc').forEach(b=>b.classList.remove('on')); if(el)el.classList.add('on'); renderTickets(); }
 
 function ticketCard(t, mesActStart){
   const sla=getSLA(t);
@@ -1049,9 +1124,10 @@ function ticketCard(t, mesActStart){
   const extra=t.pin?' pinned':sla.status==='over'?' vencido':sla.status==='warn'?' riesgo':isOld?' mes-anterior':'';
   const noEvidencia=t.estado==='Esperando Material'&&!t.fotoMaterial;
   const slaBar=t.estado!=='Cerrado'?`<div class="sla-row s-${sla.status}"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${sla.status==='over'?'🔴 Vencido':sla.waiting?'⏸ Esp. material':'⏱ '+sla.label}</span></div>`:'';
-  const tags=`${urgBadge(t.urg)}${estBadge(t.estado)}${t.tec?`<span class="badge b-gray"><i class="ti ti-user" style="font-size:11px"></i> ${shortName(t.tec)}</span>`:''}${isOld?'<span class="badge b-orange">Mes anterior</span>':''}${noEvidencia?'<span class="badge b-red">!! Sin evidencia material</span>':''}`;
+  const tags=`${urgBadge(t.urg)}${estBadge(t.estado)}${t.tec?`<span class="badge b-gray"><i class="ti ti-user" style="font-size:11px"></i> ${shortName(t.tec)}</span>`:'<span class="badge b-red"><i class="ti ti-user-off" style="font-size:11px"></i> Sin asignar</span>'}${isOld?'<span class="badge b-orange">Mes anterior</span>':''}${noEvidencia?'<span class="badge b-red">!! Sin evidencia material</span>':''}`;
   return`<div class="tc tc-${uc}${extra}" onclick="openTicket('${t._key||t.id}')">
-    <div class="tc-top"><span class="tc-folio">${t.pin?'⭐ ':''}${t.id}</span><span class="tc-time">${elapsed(t.ts)} · ${t.est}</span></div>
+    <div class="tc-top"><span class="tc-folio">${t.pin?'⭐ ':''}${t.id}</span><span class="tc-time">${elapsed(t.ts)}</span></div>
+    <div style="font-size:12px;font-weight:700;color:var(--g600);margin-bottom:4px"><i class="ti ti-building-store" style="font-size:11px;margin-right:3px"></i>${t.est}</div>
     <div class="tc-tipo">${t.cat}</div><div class="tc-sub">${t.sub}</div>
     <div class="tc-desc">${t.desc}</div>
     <div class="tc-meta">${tags}</div>${slaBar}
@@ -1078,6 +1154,10 @@ function openTicket(key){
       <select id="asel" style="flex:1"><option value="">— Asignar técnico —</option>${getAllTecnicos().map(tc=>`<option ${t.tec===tc?'selected':''}>${tc}</option>`).join('')}</select>
       <button class="bs bs-red" onclick="assignTec('${key}')"><i class="ti ti-check"></i>Asignar</button>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;color:var(--g600);cursor:pointer">
+      <input type="checkbox" id="asel-plan" style="width:16px;height:16px;accent-color:var(--blue)">
+      Agregar al plan de hoy del técnico
+    </label>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
       <button class="bs ${t.pin?'bs-purple':'bs-out'}" onclick="togglePin('${key}')" style="flex:1"><i class="ti ti-star"></i>${t.pin?'Quitar prioridad':'⭐ Prioridad'}</button>
       <button class="bs bs-amber" onclick="setWaiting('${key}')" style="flex:1"><i class="ti ti-package"></i>${t.estado==='Esperando Material'?'Reanudar':'Esp. material'}</button>
@@ -1160,8 +1240,17 @@ function openTicket(key){
 // ── ACCIONES ──────────────────────────────────────────────
 function assignTec(key){
   const sel=document.getElementById('asel'); if(!sel?.value){showToast('Selecciona un técnico');return;}
-  fbUpd(key,{tec:sel.value,tsA:Date.now(),estado:'Asignado'});
-  closeModal('m-detail'); showToast('Asignado a '+shortName(sel.value));
+  const addPlan=document.getElementById('asel-plan')?.checked||false;
+  const hoy=todayStart();
+  const updates={tec:sel.value,tsA:Date.now(),estado:'Asignado'};
+  if(addPlan){ updates.planDia=true; updates.planDiaFecha=hoy; updates.planForzado=true; updates.planForzadoTs=Date.now(); updates.planForzadoPor=UNAMES[window._CU]||window._CU; updates.planVisto=false; }
+  fbUpd(key,updates);
+  if(addPlan){
+    const t=window._tickets.find(x=>(x._key||x.id)===key);
+    if(t){ const tConTec={...t,...updates}; logPlanEntry(tConTec,hoy); }
+  }
+  closeModal('m-detail');
+  showToast(addPlan?'Asignado a '+shortName(sel.value)+' y agregado al plan de hoy':'Asignado a '+shortName(sel.value));
 }
 
 function togglePin(key){
@@ -1221,12 +1310,6 @@ function renderPlan(){
   const myName=TEC_MAP[window._CU]||'';
   const hoy=todayStart();
   const todos=window._tickets.filter(t=>t.tec===myName&&t.estado!=='Cerrado');
-
-  // Verificar urgencias Alta que deben entrar automáticamente
-  todos.filter(t=>t.urg==='Alta'&&!t.planDia).forEach(t=>{
-    fbUpd(t._key||t.id,{planDia:true,planDiaFecha:hoy});
-    logPlanEntry(t,hoy);
-  });
 
   const planHoy=todos.filter(t=>t.planDia&&(t.planDiaFecha||0)>=hoy);
 
@@ -1386,6 +1469,9 @@ function createTicket(){
   const id=genId();
   const ticket={id,est,cat:cat.name,sub:sub.name,desc,urg:sub.urg||'Media',estado:'Abierto',rep,ts:Date.now(),tsA:null,tsI:null,tsC:null,tec:'',accion:'',pin:false,tsWait:null,fotoFalla:'',fotoCierre:'',planDia:false};
   if(window._db){ const nr=window._push(window._ref(window._db,'tickets')); window._set(nr,ticket); }
+  ['n-est','n-cat','n-sub'].forEach(id=>{const s=document.getElementById(id);if(s)s.value='';});
+  ['n-desc','n-rep'].forEach(id=>{const s=document.getElementById(id);if(s)s.value='';});
+  document.getElementById('n-sub').innerHTML='<option value="">— Primero elige categoría —</option>';
   closeModal('m-new'); showToast('✅ Ticket '+id+' creado');
 }
 
