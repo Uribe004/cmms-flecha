@@ -622,19 +622,10 @@ window._DEFAULT_USUARIOS = {
   'sup-dayanara':{nombre:'Dayanara Castillo',rol:'sup',pass:'12345'},
   'sup-juanmanuel':{nombre:'Juan Manuel Osuna',rol:'sup',pass:'12345'},
   'sup-edgar':{nombre:'Edgar Navarro',rol:'sup',pass:'12345'},
-  'est-estadio':{nombre:'Estadio',rol:'est',pass:'12345'},
-  'est-petrolera':{nombre:'Petrolera',rol:'est',pass:'12345'},
-  'est-sangerman':{nombre:'San Germán',rol:'est',pass:'12345'},
-  'est-valiente':{nombre:'Valiente',rol:'est',pass:'12345'},
-  'est-corsario':{nombre:'Corsario',rol:'est',pass:'12345'},
-  'est-lomalinda':{nombre:'Loma Linda',rol:'est',pass:'12345'},
-  'est-mg':{nombre:'MG',rol:'est',pass:'12345'},
-  'est-sancarlos':{nombre:'San Carlos',rol:'est',pass:'12345'},
-  'est-batuecas':{nombre:'Batuecas',rol:'est',pass:'12345'},
-  'est-arcaza':{nombre:'Arcaza',rol:'est',pass:'12345'},
-  'est-miramar':{nombre:'Miramar',rol:'est',pass:'12345'},
+  'encargado':{nombre:'Encargado de estación',rol:'est',pass:''},
+
 };
-let UNAMES = {director:'Francisco',jefe:'Santiago Meza','tec-armando':'Jesús Armando Valladolid','tec-martin':'Martin Gonzalez','tec-jose':'José Luis Flores','tec-enrique':'Enrique Valle','est-estadio':'Estadio','est-petrolera':'Petrolera','est-sangerman':'San Germán','est-valiente':'Valiente','est-corsario':'Corsario','est-lomalinda':'Loma Linda','est-mg':'MG','est-sancarlos':'San Carlos','est-batuecas':'Batuecas','est-arcaza':'Arcaza','est-miramar':'Miramar','sup-dayanara':'Dayanara Castillo','sup-juanmanuel':'Juan Manuel Osuna','sup-edgar':'Edgar Navarro'};
+let UNAMES = {director:'Francisco',jefe:'Santiago Meza','tec-armando':'Jesús Armando Valladolid','tec-martin':'Martin Gonzalez','tec-jose':'José Luis Flores','tec-enrique':'Enrique Valle','sup-dayanara':'Dayanara Castillo','sup-juanmanuel':'Juan Manuel Osuna','sup-edgar':'Edgar Navarro',encargado:'Encargado de estación'};
 const SUP_ZONES = {'sup-dayanara':['San Carlos','San Germán','MG','Loma Linda','Miramar'],'sup-juanmanuel':['Petrolera','Arcaza','Corsario','Estadio','Batuecas'],'sup-edgar':['Valiente']};
 const TEC_MAP = UNAMES; // alias: TEC_MAP[clave] resuelve igual que UNAMES[clave], se mantiene sincronizado
 function getAllTecnicos(){
@@ -812,8 +803,14 @@ function populateLoginSelect(){
   const sel=document.getElementById('au'); if(!sel||!window._usuarios)return;
   const prevVal=sel.value;
   const groups={director:{label:'Dirección',items:[]},jefe:{label:'Mantenimiento',items:[]},tec:{label:'Mantenimiento',items:[]},sup:{label:'Supervisores',items:[]},est:{label:'Estaciones',items:[]}};
+  let encargadoAdded=false;
   Object.entries(window._usuarios).forEach(([key,u])=>{
     if(u.activo===false) return;
+    // Claves est-* heredadas de Firebase (versión anterior): consolidar en una sola entrada genérica
+    if(key.startsWith('est-')||u.rol==='est'){
+      if(!encargadoAdded){ groups.est.items.push({key:'encargado',nombre:'Encargado de estación'}); encargadoAdded=true; }
+      return;
+    }
     const g=groups[u.rol]||groups[key==='director'?'director':'est'];
     if(g) g.items.push({key,nombre:u.nombre});
   });
@@ -822,7 +819,7 @@ function populateLoginSelect(){
   const seenLabels=new Set();
   order.forEach(roleKey=>{
     const g=groups[roleKey]; if(!g||!g.items.length)return;
-    if(seenLabels.has(g.label))return; // jefe+tec comparten label 'Mantenimiento', combinar
+    if(seenLabels.has(g.label))return;
     seenLabels.add(g.label);
     let items=[...g.items];
     if(roleKey==='jefe') items=items.concat(groups.tec.items);
@@ -836,9 +833,22 @@ function doLogin(){
   const u = document.getElementById('au').value;
   const pass = document.getElementById('au-pass').value;
   const errEl = document.getElementById('aerr');
-  if(!u||!pass){ errEl.textContent='Selecciona tu perfil e ingresa tu contraseña.'; errEl.style.display='block'; return; }
+  if(!u){ errEl.textContent='Selecciona tu perfil.'; errEl.style.display='block'; return; }
+  // Encargado: entrada libre sin contraseña, aunque la clave aún no exista en Firebase
+  if(u==='encargado'){
+    if(window._usuarios&&!window._usuarios['encargado']){
+      window._usuarios['encargado']={nombre:'Encargado de estación',rol:'est',pass:''};
+      fbSet('usuarios',window._usuarios);
+    }
+    errEl.style.display='none';
+    window._CU='encargado'; window._CR='est';
+    try{ sessionStorage.setItem('fg_u','encargado'); }catch(e){}
+    startApp(); return;
+  }
   const usr = (window._usuarios||{})[u];
-  if(!usr || usr.pass!==pass){ errEl.textContent='Contraseña incorrecta.'; errEl.style.display='block'; return; }
+  if(!usr){ errEl.textContent='Usuario no encontrado.'; errEl.style.display='block'; return; }
+  if(!pass){ errEl.textContent='Ingresa tu contraseña.'; errEl.style.display='block'; return; }
+  if(usr.pass!==pass){ errEl.textContent='Contraseña incorrecta.'; errEl.style.display='block'; return; }
   if(usr.activo===false){ errEl.textContent='Este usuario fue dado de baja. Contacta a tu gerente.'; errEl.style.display='block'; return; }
   errEl.style.display='none';
   window._CU=u; window._CR=getRole(u);
@@ -862,7 +872,7 @@ function startApp(){
   document.getElementById('sb-user').textContent=name;
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
   populateSelects(); buildNav();
-  if(window._CR==='est'){ showView('rep'); presetEst(); }
+  if(window._CR==='est'){ showView('rep'); }
   else if(window._CR==='tec'){ showView('plan'); renderPlan(); }
   else{ showView('dash'); renderDash(); }
 }
