@@ -21,10 +21,11 @@
   --green:#15803D;--green-l:#DCFCE7;--green-d:#14532D;
   --blue:#1D4ED8;--blue-l:#DBEAFE;--blue-d:#1E3A8A;
   --purple:#7C3AED;--purple-l:#EDE9FE;
-  --orange:#EA580C;--orange-l:#FFF7ED;
   --r:10px;--rs:6px;
 }
 html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--g50);color:var(--g900);font-size:15px;line-height:1.5;overflow:hidden}
+
+/* AUTH */
 #auth{position:fixed;inset:0;background:var(--white);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;z-index:999;overflow-y:auto}
 .auth-logo{height:52px;margin-bottom:2rem;object-fit:contain}
 .auth-card{width:100%;max-width:340px;background:var(--white);border:1px solid var(--g200);border-radius:var(--r);padding:1.75rem;box-shadow:0 4px 24px rgba(0,0,0,.08)}
@@ -32,11 +33,13 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 .auth-sub{font-size:13px;color:var(--g500);margin-bottom:1.25rem}
 .fl{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
 .fl label{font-size:12px;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.04em}
-select,input[type=text],input[type=number],textarea{width:100%;padding:10px 12px;border:1px solid var(--g300);border-radius:var(--rs);font-size:14px;color:var(--g900);background:var(--white);-webkit-appearance:none;appearance:none;font-family:inherit}
+select,input[type=text],input[type=number],input[type=password],textarea{width:100%;padding:10px 12px;border:1px solid var(--g300);border-radius:var(--rs);font-size:14px;color:var(--g900);background:var(--white);-webkit-appearance:none;appearance:none;font-family:inherit}
 select:focus,input:focus,textarea:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(185,28,28,.1)}
 .btn-main{width:100%;padding:13px;background:var(--red);color:var(--white);border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
 .btn-main:active{background:var(--red-dark)}
 .auth-err{font-size:12px;color:var(--red);margin-top:6px;display:none}
+
+/* APP SHELL */
 #app{display:none;flex-direction:column;height:100vh;height:100dvh}
 #app.on{display:flex}
 .topbar{background:var(--red);color:var(--white);padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:100}
@@ -54,78 +57,95 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--red);box
 .nbadge{position:absolute;top:5px;right:50%;transform:translateX(13px);background:var(--red);color:var(--white);font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
 .view{display:none;padding:14px 14px 0}
 .view.on{display:block}
-.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;margin-top:2px}
-.sh-title{font-size:17px;font-weight:700;color:var(--g900)}
-.sh-sub{font-size:12px;color:var(--g500);margin-top:1px}
+
 /* KPI */
-.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
 .kpi{background:var(--white);border:1px solid var(--g200);border-radius:var(--r);padding:12px 14px;position:relative;overflow:hidden;cursor:pointer}
 .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
 .kpi-red::before{background:var(--red)}
 .kpi-amber::before{background:var(--amber)}
 .kpi-green::before{background:var(--green)}
 .kpi-blue::before{background:var(--blue)}
-.kpi-purple::before{background:var(--purple)}
 .kpi-lbl{font-size:10px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
 .kpi-val{font-size:26px;font-weight:800;line-height:1}
 .kpi-red .kpi-val{color:var(--red)}
 .kpi-amber .kpi-val{color:var(--amber)}
 .kpi-green .kpi-val{color:var(--green)}
 .kpi-blue .kpi-val{color:var(--blue)}
-.kpi-purple .kpi-val{color:var(--purple)}
-.kpi-pct{font-size:12px;font-weight:700;margin-top:2px}
-.kpi-sub{font-size:10px;color:var(--g400);margin-top:1px}
-/* PERIOD SELECTOR */
+.kpi-sub{font-size:10px;color:var(--g400);margin-top:2px}
+
+/* PERIOD */
 .period-row{display:flex;gap:6px;margin-bottom:12px}
-.period-btn{padding:5px 14px;border:1px solid var(--g300);border-radius:20px;font-size:12px;font-weight:600;color:var(--g600);background:var(--white);cursor:pointer;white-space:nowrap}
+.period-btn{padding:5px 14px;border:1px solid var(--g300);border-radius:20px;font-size:12px;font-weight:600;color:var(--g600);background:var(--white);cursor:pointer}
 .period-btn.on{background:var(--red);border-color:var(--red);color:var(--white)}
-/* FILTER ROW */
-.frow{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
-.frow::-webkit-scrollbar{display:none}
-.fc{padding:6px 14px;border:1px solid var(--g300);border-radius:20px;font-size:12px;font-weight:600;color:var(--g600);background:var(--white);cursor:pointer;white-space:nowrap;flex-shrink:0}
-.fc.on{background:var(--red);border-color:var(--red);color:var(--white)}
-/* CARDS */
+
+/* CARD */
 .card{background:var(--white);border:1px solid var(--g200);border-radius:var(--r);padding:14px;margin-bottom:10px}
 .card-title{font-size:13px;font-weight:700;color:var(--g700);margin-bottom:12px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.04em}
 .card-title i{font-size:16px;color:var(--red)}
+
+/* EST GROUP */
+.est-group{background:var(--white);border:1px solid var(--g200);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.est-header{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--g100)}
+.est-name{font-size:14px;font-weight:700;color:var(--g900)}
+.est-pills{display:flex;gap:6px;align-items:center}
+.est-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px}
+.pill-blue{background:var(--blue-l);color:var(--blue-d)}
+.pill-amber{background:var(--amber-l);color:var(--amber-d)}
+.pill-green{background:var(--green-l);color:var(--green-d)}
+.pill-red{background:var(--red-light);color:var(--red-dark)}
+.est-body{padding:8px 10px}
+
 /* TICKET CARD */
-.tc{background:var(--white);border:1px solid var(--g200);border-radius:var(--r);padding:13px 14px;margin-bottom:8px;cursor:pointer;position:relative;overflow:hidden}
-.tc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
-.tc-alta::before{background:var(--red)}
-.tc-media::before{background:var(--amber)}
-.tc-baja::before{background:var(--green)}
-.tc.pinned{border-color:var(--purple)}
-.tc.riesgo{background:#FFFBEB}
-.tc.vencido{background:#FEF2F2}
-.tc.mes-anterior{border-style:dashed;opacity:.85}
-.tc.plan-hoy{border-color:var(--blue);background:var(--blue-l)}
-.tc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:5px}
+.tc{border-radius:var(--rs);padding:11px 12px;margin-bottom:6px;cursor:pointer;position:relative;overflow:hidden;border-left:4px solid transparent}
+.tc:last-child{margin-bottom:0}
+.tc-abierto{background:#EFF6FF;border-left-color:var(--blue)}
+.tc-proceso{background:#FFFBEB;border-left-color:var(--amber)}
+.tc-cerrado{background:var(--g50);border-left-color:var(--green);opacity:.8}
+.tc-vencido{background:var(--red-light);border-left-color:var(--red)}
+.tc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:3px}
 .tc-folio{font-size:11px;font-weight:800;color:var(--red);letter-spacing:.05em}
 .tc-time{font-size:11px;color:var(--g400)}
-.tc-tipo{font-size:14px;font-weight:700;color:var(--g900);margin-bottom:2px}
-.tc-sub{font-size:12px;color:var(--g600);margin-bottom:6px}
-.tc-desc{font-size:12px;color:var(--g500);margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.tc-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tc-tipo{font-size:13px;font-weight:700;color:var(--g900)}
+.tc-sub{font-size:12px;color:var(--g600);margin-bottom:4px}
+.tc-desc{font-size:12px;color:var(--g500);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:6px}
+.tc-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+
 /* BADGES */
-.badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:12px;white-space:nowrap}
 .b-red{background:var(--red-light);color:var(--red-dark)}
 .b-amber{background:var(--amber-l);color:var(--amber-d)}
 .b-green{background:var(--green-l);color:var(--green-d)}
 .b-blue{background:var(--blue-l);color:var(--blue-d)}
 .b-gray{background:var(--g100);color:var(--g600)}
-.b-purple{background:var(--purple-l);color:var(--purple)}
-.b-orange{background:var(--orange-l);color:var(--orange)}
+
 /* SLA BAR */
-.sla-row{display:flex;align-items:center;gap:8px;margin-top:8px}
-.sla-track{flex:1;height:5px;background:var(--g100);border-radius:3px;overflow:hidden}
+.sla-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.sla-track{flex:1;height:4px;background:var(--g100);border-radius:3px;overflow:hidden}
 .sla-fill{height:100%;border-radius:3px}
 .s-ok .sla-fill{background:var(--green)}
 .s-warn .sla-fill{background:var(--amber)}
 .s-over .sla-fill{background:var(--red)}
-.sla-lbl{font-size:11px;font-weight:700;white-space:nowrap}
+.sla-lbl{font-size:10px;font-weight:700;white-space:nowrap}
 .s-ok .sla-lbl{color:var(--green)}
 .s-warn .sla-lbl{color:var(--amber)}
 .s-over .sla-lbl{color:var(--red)}
+
+/* FILTER PANEL */
+.filter-btn{background:var(--white);border:1px solid var(--g300);border-radius:var(--rs);padding:7px 12px;font-size:13px;font-weight:600;color:var(--g600);cursor:pointer;display:flex;align-items:center;gap:6px}
+.filter-btn.active{background:var(--red-light);border-color:var(--red);color:var(--red)}
+.filter-panel{position:fixed;inset:0;z-index:400;display:none}
+.filter-panel.on{display:block}
+.filter-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.4)}
+.filter-drawer{position:absolute;bottom:0;left:0;right:0;background:var(--white);border-radius:16px 16px 0 0;padding:20px 16px 36px;max-height:85vh;overflow-y:auto}
+.filter-handle{width:32px;height:4px;background:var(--g300);border-radius:2px;margin:0 auto 16px}
+.filter-title{font-size:15px;font-weight:700;margin-bottom:16px}
+.filter-section{margin-bottom:16px}
+.filter-section-label{font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.filter-chips{display:flex;flex-wrap:wrap;gap:6px}
+.fchip{padding:6px 12px;border:1px solid var(--g300);border-radius:20px;font-size:12px;font-weight:600;color:var(--g600);background:var(--white);cursor:pointer}
+.fchip.on{background:var(--red);border-color:var(--red);color:var(--white)}
+
 /* FORM */
 .fg{margin-bottom:14px}
 .fg label{display:block;font-size:12px;font-weight:700;color:var(--g700);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
@@ -134,21 +154,25 @@ textarea{resize:none;min-height:80px}
 .photo-area{border:2px dashed var(--g300);border-radius:var(--rs);padding:20px;text-align:center;cursor:pointer;color:var(--g400);background:var(--g50)}
 .photo-area.has-photo{border-color:var(--green);background:var(--green-l);color:var(--green-d)}
 .photo-area i{font-size:28px;display:block;margin-bottom:6px}
-.photo-area span{font-size:13px;font-weight:500}
 .photo-prev{width:100%;border-radius:var(--rs);margin-top:8px;display:none;max-height:200px;object-fit:cover}
 .photo-prev.on{display:block}
+
 /* MODAL */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:flex-end;justify-content:center}
 .overlay.on{display:flex}
 .modal{background:var(--white);border-radius:16px 16px 0 0;width:100%;max-height:92vh;overflow-y:auto;padding:18px 16px 36px;-webkit-overflow-scrolling:touch}
 .modal-handle{width:32px;height:4px;background:var(--g300);border-radius:2px;margin:0 auto 14px}
 .modal-title{font-size:17px;font-weight:800;color:var(--g900);margin-bottom:14px}
+.back-btn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--red);background:none;border:none;cursor:pointer;padding:0 0 12px}
+
 /* DETAIL */
 .dr{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--g100)}
 .dr:last-child{border:none}
 .di{width:30px;height:30px;background:var(--g100);border-radius:var(--rs);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;color:var(--g500)}
 .dl{font-size:11px;color:var(--g400);margin-bottom:1px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
 .dv{font-size:13px;font-weight:600;color:var(--g800)}
+.sdiv{font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.06em;padding:10px 0 6px;border-bottom:1px solid var(--g200);margin-bottom:10px;margin-top:6px}
+
 /* TIMELINE */
 .tl{padding:6px 0}
 .tl-item{display:flex;gap:10px;margin-bottom:14px;position:relative}
@@ -159,6 +183,7 @@ textarea{resize:none;min-height:80px}
 .tl-pend{background:var(--g300)}
 .tl-txt{font-size:13px;color:var(--g600)}
 .tl-txt strong{color:var(--g900);font-weight:700;display:block}
+
 /* CHAT */
 .chat-wrap{border:1px solid var(--g200);border-radius:var(--r);overflow:hidden;margin-top:8px}
 .chat-msgs{max-height:220px;overflow-y:auto;padding:10px;background:var(--g50);display:flex;flex-direction:column;gap:8px}
@@ -172,14 +197,15 @@ textarea{resize:none;min-height:80px}
 .chat-input{flex:1;border:1px solid var(--g300);border-radius:20px;padding:8px 12px;font-size:13px;resize:none;min-height:36px;max-height:80px;font-family:inherit}
 .chat-send-btn{background:var(--red);border:none;color:var(--white);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
 .chat-img-btn{background:var(--g100);border:none;color:var(--g600);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-/* PLAN DEL DIA */
-.plan-header{background:var(--blue);color:var(--white);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
-.plan-header i{font-size:20px}
-.plan-header-txt{flex:1}
-.plan-header-title{font-size:14px;font-weight:700}
-.plan-header-sub{font-size:12px;opacity:.85}
-.plan-count{font-size:24px;font-weight:800}
-.notif-banner{background:var(--red-light);border:1px solid var(--red-light);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--red-dark);font-weight:600;cursor:pointer}
+
+/* BUTTONS */
+.bs{padding:9px 14px;font-size:13px;font-weight:700;border-radius:var(--rs);cursor:pointer;border:none;display:inline-flex;align-items:center;gap:5px;justify-content:center}
+.bs-red{background:var(--red);color:var(--white)}
+.bs-out{background:var(--white);color:var(--g700);border:1px solid var(--g300)}
+.bs-green{background:var(--green);color:var(--white)}
+.bs-amber{background:var(--amber);color:var(--white)}
+.bs-blue{background:var(--blue);color:var(--white)}
+
 /* BAR CHART */
 .bc{display:flex;flex-direction:column;gap:7px}
 .br{display:flex;align-items:center;gap:8px}
@@ -187,35 +213,8 @@ textarea{resize:none;min-height:80px}
 .bt{flex:1;height:8px;background:var(--g100);border-radius:4px;overflow:hidden}
 .bf{height:100%;background:var(--red);border-radius:4px}
 .bn{font-size:12px;font-weight:700;color:var(--g700);width:22px;text-align:right}
-/* MINI TABLE */
-.mt{width:100%;border-collapse:collapse;font-size:12px}
-.mt th{text-align:left;padding:7px 8px;font-size:10px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--g200)}
-.mt td{padding:9px 8px;border-bottom:1px solid var(--g100);color:var(--g700);font-weight:500}
-.mt tr:last-child td{border:none}
-.mt .nr{text-align:right;font-weight:700;color:var(--g900)}
-/* BUTTONS */
-.bs{padding:9px 14px;font-size:13px;font-weight:700;border-radius:var(--rs);cursor:pointer;border:none;display:inline-flex;align-items:center;gap:5px;justify-content:center}
-.bs-red{background:var(--red);color:var(--white)}
-.bs-out{background:var(--white);color:var(--g700);border:1px solid var(--g300)}
-.bs-green{background:var(--green);color:var(--white)}
-.bs-amber{background:var(--amber);color:var(--white)}
-.bs-purple{background:var(--purple);color:var(--white)}
-.bs-blue{background:var(--blue);color:var(--white)}
-.back-btn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--red);background:none;border:none;cursor:pointer;padding:0 0 10px}
-.sdiv{font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.06em;padding:10px 0 6px;border-bottom:1px solid var(--g200);margin-bottom:10px}
-.empty{text-align:center;padding:48px 20px;color:var(--g400)}
-.empty i{font-size:44px;display:block;margin-bottom:10px;color:var(--g300)}
-.empty p{font-size:13px;font-weight:500}
-.toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%)translateY(16px);background:var(--g900);color:var(--white);padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;z-index:1000;opacity:0;transition:all .25s;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center}
-.toast.on{opacity:1;transform:translateX(-50%)translateY(0)}
-.loading-screen{position:fixed;inset:0;background:var(--white);display:flex;align-items:center;justify-content:center;z-index:998;flex-direction:column;gap:12px}
-.spinner{width:32px;height:32px;border:3px solid var(--g200);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.waiting-bar{background:var(--blue-l);border-radius:var(--rs);padding:8px 12px;font-size:12px;color:var(--blue-d);font-weight:600;display:flex;align-items:center;gap:6px;margin-top:8px}
-.times-row{display:flex;gap:8px;margin:8px 0}
-.time-box{flex:1;background:var(--g50);border:1px solid var(--g200);border-radius:var(--rs);padding:8px;text-align:center}
-.time-box-lbl{font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
-.time-box-val{font-size:15px;font-weight:800;color:var(--g900)}
+
+/* CFG */
 .cfg-cat{background:var(--white);border:1px solid var(--g200);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
 .cfg-cat-hdr{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer}
 .cfg-cat-name{flex:1;font-size:14px;font-weight:700;color:var(--g800)}
@@ -228,6 +227,26 @@ textarea{resize:none;min-height:80px}
 .ub.sel-alta{background:var(--red-light);border-color:var(--red);color:var(--red-dark)}
 .ub.sel-media{background:var(--amber-l);border-color:var(--amber);color:var(--amber-d)}
 .ub.sel-baja{background:var(--green-l);border-color:var(--green);color:var(--green-d)}
+
+/* MISC */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;margin-top:2px}
+.sh-title{font-size:17px;font-weight:700}
+.sh-sub{font-size:12px;color:var(--g500);margin-top:1px}
+.empty{text-align:center;padding:48px 20px;color:var(--g400)}
+.empty i{font-size:44px;display:block;margin-bottom:10px;color:var(--g300)}
+.empty p{font-size:13px;font-weight:500}
+.toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%)translateY(16px);background:var(--g900);color:var(--white);padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;z-index:1000;opacity:0;transition:all .25s;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%)translateY(0)}
+.loading-screen{position:fixed;inset:0;background:var(--white);display:flex;align-items:center;justify-content:center;z-index:998;flex-direction:column;gap:12px}
+.spinner{width:32px;height:32px;border:3px solid var(--g200);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* USUARIOS */
+.usr-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--g100)}
+.usr-row:last-child{border:none}
+.usr-name{flex:1;font-size:13px;font-weight:600;color:var(--g800)}
+.usr-inactive{text-decoration:line-through;color:var(--g400)}
+
 /* DESKTOP */
 @media(min-width:768px){
   #app{flex-direction:row}
@@ -244,7 +263,7 @@ textarea{resize:none;min-height:80px}
   .content{flex:1;overflow-y:auto;padding-bottom:0}
   .bnav{display:none}
   .view{padding:24px 28px 24px}
-  .kpi-grid{grid-template-columns:repeat(4,1fr)}
+  .kpi-row{grid-template-columns:repeat(4,1fr)}
 }
 @media(max-width:767px){.sidebar{display:none}}
 </style>
@@ -261,15 +280,9 @@ textarea{resize:none;min-height:80px}
   <div class="auth-card">
     <p class="auth-title">Sistema de Mantenimiento</p>
     <p class="auth-sub">Selecciona tu perfil para continuar</p>
-    <div class="fl">
-      <label>¿Quién eres?</label>
-      <select id="au"><option value="">— Selecciona —</option></select>
-    </div>
-    <div class="fl">
-      <label>Contraseña</label>
-      <input type="password" id="au-pass" placeholder="Contraseña" autocomplete="current-password">
-    </div>
-    <p class="auth-err" id="aerr">Selecciona tu perfil e ingresa tu contraseña.</p>
+    <div class="fl"><label>¿Quién eres?</label><select id="au"><option value="">— Selecciona —</option></select></div>
+    <div class="fl" id="pass-wrap"><label>Contraseña</label><input type="password" id="au-pass" placeholder="Contraseña" autocomplete="current-password"></div>
+    <p class="auth-err" id="aerr"></p>
     <button class="btn-main" onclick="doLogin()"><i class="ti ti-login"></i>Entrar</button>
   </div>
 </div>
@@ -301,44 +314,28 @@ textarea{resize:none;min-height:80px}
     <div class="view on" id="v-dash">
       <div class="sh">
         <div><div class="sh-title">Dashboard</div><div class="sh-sub" id="dash-date"></div></div>
-        <button class="bs bs-out" onclick="renderDash()"><i class="ti ti-refresh"></i></button>
+        <button class="bs bs-out" style="padding:7px 10px" onclick="renderDash()"><i class="ti ti-refresh"></i></button>
       </div>
       <div class="period-row">
         <button class="period-btn on" onclick="setPeriod('mes',this)">Este mes</button>
         <button class="period-btn" onclick="setPeriod('semana',this)">Esta semana</button>
         <button class="period-btn" onclick="setPeriod('mes-ant',this)">Mes anterior</button>
       </div>
-      <div class="frow" id="dash-filters">
-        <button class="fc on" onclick="setDashFilter('todos',this)">Todas</button>
-        <button class="fc" onclick="setDashFilter('tec',this)">Por técnico</button>
-        <button class="fc" onclick="setDashFilter('Estadio',this)">Estadio</button>
-        <button class="fc" onclick="setDashFilter('Petrolera',this)">Petrolera</button>
-        <button class="fc" onclick="setDashFilter('San Germán',this)">San Germán</button>
-        <button class="fc" onclick="setDashFilter('Valiente',this)">Valiente</button>
-        <button class="fc" onclick="setDashFilter('Corsario',this)">Corsario</button>
-        <button class="fc" onclick="setDashFilter('Loma Linda',this)">Loma Linda</button>
-        <button class="fc" onclick="setDashFilter('MG',this)">MG</button>
-        <button class="fc" onclick="setDashFilter('San Carlos',this)">San Carlos</button>
-        <button class="fc" onclick="setDashFilter('Batuecas',this)">Batuecas</button>
-        <button class="fc" onclick="setDashFilter('Arcaza',this)">Arcaza</button>
-        <button class="fc" onclick="setDashFilter('Miramar',this)">Miramar</button>
-      </div>
-      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="kpi-row" id="kpi-grid"></div>
       <div class="card">
-        <div class="card-title"><i class="ti ti-clock-hour-4"></i>Tiempos promedio del período</div>
-        <div style="display:flex;gap:0;border:1px solid var(--g200);border-radius:var(--rs);overflow:hidden" id="dash-avgs"></div>
-      </div>
-      <div class="card">
-        <div class="card-title"><i class="ti ti-building-store"></i>Tickets activos por estación</div>
-        <div class="bc" id="bar-est"></div>
-      </div>
-      <div class="card" id="card-tec">
-        <div class="card-title"><i class="ti ti-users"></i>Carga por técnico</div>
-        <table class="mt"><thead><tr><th>Técnico</th><th>Plan hoy</th><th>Asig.</th><th>Cerr.</th><th>T.Creación</th><th>T.Asig.</th></tr></thead><tbody id="tbody-tec"></tbody></table>
+        <div class="card-title"><i class="ti ti-clock-hour-4"></i>Tiempos promedio</div>
+        <div style="display:flex;border:1px solid var(--g200);border-radius:var(--rs);overflow:hidden" id="dash-avgs"></div>
       </div>
       <div class="card">
         <div class="card-title"><i class="ti ti-chart-bar"></i>Fallas más frecuentes</div>
         <div class="bc" id="bar-tipos"></div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="cursor:pointer" onclick="toggleEstChart()">
+          <i class="ti ti-building-store"></i>Tickets por estación
+          <i class="ti ti-chevron-down" id="est-chevron" style="margin-left:auto;font-size:14px;color:var(--g400)"></i>
+        </div>
+        <div id="bar-est" style="display:none"></div>
       </div>
     </div>
 
@@ -348,36 +345,20 @@ textarea{resize:none;min-height:80px}
         <div><div class="sh-title">Tickets</div><div class="sh-sub" id="tcount"></div></div>
         <button class="bs bs-red" onclick="openModal('m-new')"><i class="ti ti-plus"></i>Nuevo</button>
       </div>
-      <div class="frow" id="t-filters">
-        <button class="fc on" onclick="filterT('todos',this)">Todos</button>
-        <button class="fc" onclick="filterT('Abierto',this)">Abiertos</button>
-        <button class="fc" onclick="filterT('Asignado',this)">Asignados</button>
-        <button class="fc" onclick="filterT('En Proceso',this)">En proceso</button>
-        <button class="fc" onclick="filterT('Esperando Material',this)">Esp. material</button>
-        <button class="fc" onclick="filterT('Cerrado',this)">Cerrados</button>
-        <button class="fc" onclick="filterT('vencido',this)">🔴 Vencidos</button>
-        <button class="fc" onclick="filterT('prioridad',this)">⭐ Prioridad</button>
-      </div>
-      <div class="frow" id="t-est-filters">
-        <button class="fc on" onclick="filterTEst('todas',this)">Todas las estaciones</button>
-        <button class="fc" onclick="filterTEst('Estadio',this)">Estadio</button>
-        <button class="fc" onclick="filterTEst('Petrolera',this)">Petrolera</button>
-        <button class="fc" onclick="filterTEst('San Germán',this)">San Germán</button>
-        <button class="fc" onclick="filterTEst('Valiente',this)">Valiente</button>
-        <button class="fc" onclick="filterTEst('Corsario',this)">Corsario</button>
-        <button class="fc" onclick="filterTEst('Loma Linda',this)">Loma Linda</button>
-        <button class="fc" onclick="filterTEst('MG',this)">MG</button>
-        <button class="fc" onclick="filterTEst('San Carlos',this)">San Carlos</button>
-        <button class="fc" onclick="filterTEst('Batuecas',this)">Batuecas</button>
-        <button class="fc" onclick="filterTEst('Arcaza',this)">Arcaza</button>
-        <button class="fc" onclick="filterTEst('Miramar',this)">Miramar</button>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <button class="period-btn on" id="sf-todos" onclick="setStatusFilter('todos',this)">Todos</button>
+        <button class="period-btn" id="sf-abierto" onclick="setStatusFilter('Abierto',this)">Abiertos</button>
+        <button class="period-btn" id="sf-proceso" onclick="setStatusFilter('En Proceso',this)">En proceso</button>
+        <button class="period-btn" id="sf-cerrado" onclick="setStatusFilter('Cerrado',this)">Cerrados</button>
+        <button class="period-btn" id="sf-vencido" onclick="setStatusFilter('vencido',this)">🔴 Vencidos</button>
+        <button class="filter-btn" id="filter-toggle-btn" onclick="openFilterPanel()"><i class="ti ti-adjustments-horizontal"></i></button>
       </div>
       <div id="tlist"></div>
     </div>
 
-    <!-- REPORTE -->
+    <!-- REPORTAR -->
     <div class="view" id="v-rep">
-      <div class="sh"><div class="sh-title">Reportar falla</div></div>
+      <div class="sh"><div class="sh-title">Levantar ticket Mtto</div></div>
       <div class="card">
         <div class="fg"><label>Estación <span>*</span></label><select id="r-est"><option value="">— Selecciona —</option></select></div>
         <div class="fg"><label>Categoría <span>*</span></label><select id="r-cat" onchange="loadSubs('r-cat','r-sub')"><option value="">— Selecciona —</option></select></div>
@@ -395,55 +376,6 @@ textarea{resize:none;min-height:80px}
       </div>
     </div>
 
-    <!-- PLAN DEL DÍA (técnicos) -->
-    <div class="view" id="v-plan">
-      <div class="sh"><div class="sh-title">Plan de trabajo del día</div></div>
-      <div id="plan-notif"></div>
-      <div id="plan-hoy-list"></div>
-    </div>
-
-    <!-- MIS TICKETS (técnicos) -->
-    <div class="view" id="v-mis">
-      <div class="sh"><div class="sh-title">Mis tickets</div></div>
-      <div class="frow" id="mis-filters">
-        <button class="fc on" onclick="filterMis('todos',this)">Todos</button>
-        <button class="fc" onclick="filterMis('Abierto',this)">Por iniciar</button>
-        <button class="fc" onclick="filterMis('En Proceso',this)">En proceso</button>
-        <button class="fc" onclick="filterMis('Esperando Material',this)">Esp. material</button>
-        <button class="fc" onclick="filterMis('Cerrado',this)">Cerrados</button>
-        <button class="fc" onclick="filterMis('vencido',this)">🔴 Vencidos</button>
-      </div>
-      <div id="mis-list"></div>
-    </div>
-
-    <!-- MI DASHBOARD (técnicos) -->
-    <div class="view" id="v-mi-dash">
-      <div class="sh">
-        <div><div class="sh-title">Mi desempeño</div><div class="sh-sub" id="mi-dash-sub"></div></div>
-        <button class="bs bs-out" onclick="renderMiDash()"><i class="ti ti-refresh"></i></button>
-      </div>
-      <div class="period-row">
-        <button class="period-btn on" onclick="setMiPeriod('mes',this)">Este mes</button>
-        <button class="period-btn" onclick="setMiPeriod('semana',this)">Esta semana</button>
-        <button class="period-btn" onclick="setMiPeriod('mes-ant',this)">Mes anterior</button>
-      </div>
-      <div class="kpi-grid" id="mi-kpi-grid"></div>
-      <div class="card">
-        <div class="card-title"><i class="ti ti-clock-hour-4"></i>Mis tiempos promedio</div>
-        <div style="display:flex;gap:0;border:1px solid var(--g200);border-radius:var(--rs);overflow:hidden" id="mi-avgs"></div>
-      </div>
-      <div class="card">
-        <div class="card-title"><i class="ti ti-chart-bar"></i>Mis fallas atendidas por tipo</div>
-        <div class="bc" id="mi-bar-tipos"></div>
-      </div>
-    </div>
-
-    <!-- VISTA ESTACIÓN -->
-    <div class="view" id="v-est">
-      <div class="sh"><div class="sh-title" id="est-title">Mis tickets</div></div>
-      <div id="est-list"></div>
-    </div>
-
     <!-- CONFIG -->
     <div class="view" id="v-cfg">
       <div class="sh">
@@ -453,42 +385,53 @@ textarea{resize:none;min-height:80px}
       <div id="cfg-list"></div>
     </div>
 
-    <!-- USUARIOS (director/jefe) -->
+    <!-- USUARIOS -->
     <div class="view" id="v-usuarios">
       <div class="sh">
-        <div><div class="sh-title">Usuarios</div><div class="sh-sub">Perfiles y contraseñas de acceso</div></div>
+        <div><div class="sh-title">Usuarios</div><div class="sh-sub">Perfiles y contraseñas</div></div>
         <button class="bs bs-red" onclick="openModal('m-addtec')"><i class="ti ti-plus"></i>Técnico</button>
       </div>
       <div id="usuarios-list"></div>
     </div>
 
-    <!-- PLANES (director/jefe) -->
-    <div class="view" id="v-planes">
-      <div class="sh">
-        <div><div class="sh-title">Planes de trabajo</div><div class="sh-sub" id="planes-date-sub"></div></div>
-      </div>
-      <div class="period-row">
-        <button class="bs bs-out" onclick="planesShiftDay(-1)" style="padding:8px 12px"><i class="ti ti-chevron-left"></i></button>
-        <button class="period-btn on" onclick="planesGoToday()" id="planes-today-btn">Hoy</button>
-        <button class="bs bs-out" onclick="planesShiftDay(1)" style="padding:8px 12px"><i class="ti ti-chevron-right"></i></button>
-      </div>
-      <div class="frow" id="planes-tec-filters"></div>
-      <div class="frow" id="planes-est-filters"></div>
-      <div class="frow" id="planes-status-filters">
-        <button class="fc on" onclick="setPlanesStatus('todos',this)">Todos</button>
-        <button class="fc" onclick="setPlanesStatus('Abierto',this)">Abiertos</button>
-        <button class="fc" onclick="setPlanesStatus('Asignado',this)">Asignados</button>
-        <button class="fc" onclick="setPlanesStatus('En Proceso',this)">En proceso</button>
-        <button class="fc" onclick="setPlanesStatus('Esperando Material',this)">Esp. material</button>
-        <button class="fc" onclick="setPlanesStatus('Cerrado',this)">Cerrados</button>
-        <button class="fc" onclick="setPlanesStatus('vencido',this)">🔴 Vencidos</button>
-        <button class="fc" onclick="setPlanesStatus('prioridad',this)">⭐ Prioridad</button>
-      </div>
-      <div id="planes-list"></div>
-    </div>
-
   </div>
   <nav class="bnav" id="bnav"></nav>
+</div>
+
+<!-- FILTER PANEL -->
+<div class="filter-panel" id="filter-panel">
+  <div class="filter-backdrop" onclick="closeFilterPanel()"></div>
+  <div class="filter-drawer">
+    <div class="filter-handle"></div>
+    <div class="filter-title">Filtrar tickets</div>
+    <div class="filter-section">
+      <div class="filter-section-label">Urgencia</div>
+      <div class="filter-chips">
+        <button class="fchip on" onclick="setFChip(this,'urg','todas')">Todas</button>
+        <button class="fchip" onclick="setFChip(this,'urg','Alta')">Alta</button>
+        <button class="fchip" onclick="setFChip(this,'urg','Media')">Media</button>
+        <button class="fchip" onclick="setFChip(this,'urg','Baja')">Baja</button>
+      </div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-section-label">Estación</div>
+      <div class="filter-chips" id="fp-est-chips"></div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-section-label">Antigüedad</div>
+      <div class="filter-chips">
+        <button class="fchip on" onclick="setFChip(this,'edad','todas')">Todas</button>
+        <button class="fchip" onclick="setFChip(this,'edad','hoy')">Hoy</button>
+        <button class="fchip" onclick="setFChip(this,'edad','3d')">Últimos 3 días</button>
+        <button class="fchip" onclick="setFChip(this,'edad','7d')">Esta semana</button>
+        <button class="fchip" onclick="setFChip(this,'edad','30d')">Este mes</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="bs bs-out" style="flex:1" onclick="resetFilters()">Limpiar</button>
+      <button class="bs bs-red" style="flex:2" onclick="applyFilters()"><i class="ti ti-check"></i>Aplicar filtros</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODALES -->
@@ -498,7 +441,7 @@ textarea{resize:none;min-height:80px}
 <div class="overlay" id="m-new" onclick="closeModal('m-new')">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
-    <p class="modal-title">Nuevo ticket</p>
+    <p class="modal-title">Levantar ticket Mtto</p>
     <div class="fg"><label>Estación <span>*</span></label><select id="n-est"><option value="">— Selecciona —</option></select></div>
     <div class="fg"><label>Categoría <span>*</span></label><select id="n-cat" onchange="loadSubs('n-cat','n-sub')"><option value="">— Selecciona —</option></select></div>
     <div class="fg"><label>Tipo de falla <span>*</span></label><select id="n-sub"><option value="">— Primero elige categoría —</option></select></div>
@@ -536,10 +479,10 @@ textarea{resize:none;min-height:80px}
     <div class="modal-handle"></div>
     <p class="modal-title">Cambiar contraseña</p>
     <p style="font-size:13px;color:var(--g500);margin-bottom:14px">Usuario: <strong id="pass-username"></strong></p>
-    <div class="fg"><label>Nueva contraseña <span>*</span></label><input type="password" id="pass-new" placeholder="Mínimo 4 caracteres" autocomplete="new-password"></div>
-    <div class="fg"><label>Confirmar contraseña <span>*</span></label><input type="password" id="pass-confirm" placeholder="Repite la contraseña" autocomplete="new-password"></div>
+    <div class="fg"><label>Nueva contraseña <span>*</span></label><input type="password" id="pass-new" placeholder="Mínimo 4 caracteres"></div>
+    <div class="fg"><label>Confirmar <span>*</span></label><input type="password" id="pass-confirm" placeholder="Repite la contraseña"></div>
     <p style="font-size:12px;color:var(--red);margin-bottom:10px;display:none" id="pass-err"></p>
-    <button class="btn-main" onclick="savePass()"><i class="ti ti-check"></i>Guardar contraseña</button>
+    <button class="btn-main" onclick="savePass()"><i class="ti ti-check"></i>Guardar</button>
   </div>
 </div>
 <div class="overlay" id="m-addtec" onclick="closeModal('m-addtec')">
@@ -547,8 +490,8 @@ textarea{resize:none;min-height:80px}
     <div class="modal-handle"></div>
     <p class="modal-title">Agregar técnico</p>
     <div class="fg"><label>Nombre completo <span>*</span></label><input type="text" id="nt-nombre" placeholder="Ej. Carlos Mendoza"></div>
-    <p style="font-size:12px;color:var(--g500);margin-bottom:14px">Se creará con contraseña inicial <strong>12345</strong>. El técnico podrá usarla para entrar; tú puedes cambiarla después desde esta misma pantalla.</p>
-    <button class="btn-main" onclick="saveNewTec()"><i class="ti ti-check"></i>Agregar técnico</button>
+    <p style="font-size:12px;color:var(--g500);margin-bottom:14px">Contraseña inicial: <strong>12345</strong></p>
+    <button class="btn-main" onclick="saveNewTec()"><i class="ti ti-check"></i>Agregar</button>
   </div>
 </div>
 
@@ -558,7 +501,6 @@ textarea{resize:none;min-height:80px}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, onValue, push, set, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-
 const fbConfig = {
   apiKey:"AIzaSyA-4gEsA9cfPLrtG-iKwFvOAsWNlTPVKQM",
   authDomain:"mantenimiento-cmms.firebaseapp.com",
@@ -568,44 +510,38 @@ const fbConfig = {
   messagingSenderId:"851081621466",
   appId:"1:851081621466:web:83b0234aa39f5e4eb9dae3"
 };
-
 const fbApp = initializeApp(fbConfig);
 const db = getDatabase(fbApp);
-window._db = db;
-window._ref = ref;
-window._push = push;
-window._set = set;
-window._update = update;
-window._onValue = onValue;
-window._fbReady = true;
-
-document.getElementById('loading-screen').style.display = 'none';
-document.getElementById('auth').style.display = 'flex';
+window._db=db; window._ref=ref; window._push=push; window._set=set; window._update=update; window._onValue=onValue;
+window._fbReady=true;
 
 // Cats
 onValue(ref(db,'cats'),(snap)=>{
-  window._cats = snap.exists() ? snap.val() : JSON.parse(JSON.stringify(window._DEFAULT_CATS));
-  if(!snap.exists()) set(ref(db,'cats'), window._DEFAULT_CATS);
+  window._cats=snap.exists()?snap.val():JSON.parse(JSON.stringify(window._DEFAULT_CATS));
+  if(!snap.exists()) set(ref(db,'cats'),window._DEFAULT_CATS);
   if(window._CU) populateSelects();
 },{onlyOnce:false});
 
-// Usuarios (login + nombres)
+// Usuarios
 onValue(ref(db,'usuarios'),(snap)=>{
-  if(snap.exists()){
-    window._usuarios = snap.val();
-  } else {
-    window._usuarios = JSON.parse(JSON.stringify(window._DEFAULT_USUARIOS));
-    set(ref(db,'usuarios'), window._usuarios);
-  }
-  window._usuariosReady = true;
-  // Mantener UNAMES sincronizado (clave usada en todo el resto del código)
+  if(snap.exists()){ window._usuarios=snap.val(); }
+  else { window._usuarios=JSON.parse(JSON.stringify(window._DEFAULT_USUARIOS)); set(ref(db,'usuarios'),window._usuarios); }
+  window._usuariosReady=true;
   Object.keys(window._usuarios).forEach(k=>{ UNAMES[k]=window._usuarios[k].nombre; });
   if(window._authBooted) populateLoginSelect();
 },{onlyOnce:false});
 
-// Tickets realtime
+// Tickets — migrate legacy states on load
 onValue(ref(db,'tickets'),(snap)=>{
-  window._tickets = snap.exists() ? Object.entries(snap.val()).map(([k,v])=>({...v,_key:k})) : [];
+  if(snap.exists()){
+    window._tickets=Object.entries(snap.val()).map(([k,v])=>{
+      // Migrate: Asignado → Abierto, Esperando Material → En Proceso
+      let estado=v.estado||'Abierto';
+      if(estado==='Asignado') estado='Abierto';
+      if(estado==='Esperando Material') estado='En Proceso';
+      return {...v,estado,_key:k};
+    });
+  } else { window._tickets=[]; }
   if(window._CU) _refreshCurrentView();
 });
 </script>
@@ -615,26 +551,16 @@ onValue(ref(db,'tickets'),(snap)=>{
 window._DEFAULT_USUARIOS = {
   'director':{nombre:'Francisco',rol:'director',pass:'12345'},
   'jefe':{nombre:'Santiago Meza',rol:'jefe',pass:'12345'},
-  'tec-armando':{nombre:'Jesús Armando Valladolid',rol:'tec',pass:'12345'},
-  'tec-martin':{nombre:'Martin Gonzalez',rol:'tec',pass:'12345'},
-  'tec-jose':{nombre:'José Luis Flores',rol:'tec',pass:'12345'},
-  'tec-enrique':{nombre:'Enrique Valle',rol:'tec',pass:'12345'},
+  'mtto':{nombre:'Mantenimiento Correctivo',rol:'tec',pass:'12345'},
   'sup-dayanara':{nombre:'Dayanara Castillo',rol:'sup',pass:'12345'},
   'sup-juanmanuel':{nombre:'Juan Manuel Osuna',rol:'sup',pass:'12345'},
   'sup-edgar':{nombre:'Edgar Navarro',rol:'sup',pass:'12345'},
   'encargado':{nombre:'Encargado de estación',rol:'est',pass:''},
-
 };
-let UNAMES = {director:'Francisco',jefe:'Santiago Meza','tec-armando':'Jesús Armando Valladolid','tec-martin':'Martin Gonzalez','tec-jose':'José Luis Flores','tec-enrique':'Enrique Valle','sup-dayanara':'Dayanara Castillo','sup-juanmanuel':'Juan Manuel Osuna','sup-edgar':'Edgar Navarro',encargado:'Encargado de estación'};
-const SUP_ZONES = {'sup-dayanara':['San Carlos','San Germán','MG','Loma Linda','Miramar'],'sup-juanmanuel':['Petrolera','Arcaza','Corsario','Estadio','Batuecas'],'sup-edgar':['Valiente']};
-const TEC_MAP = UNAMES; // alias: TEC_MAP[clave] resuelve igual que UNAMES[clave], se mantiene sincronizado
-function getAllTecnicos(){
-  const u=window._usuarios; if(!u) return ['Jesús Armando Valladolid','Martin Gonzalez','José Luis Flores','Enrique Valle','Santiago Meza'];
-  return Object.entries(u).filter(([k,v])=>(v.rol==='tec'||v.rol==='jefe')&&v.activo!==false).map(([k,v])=>v.nombre);
-}
-const EST_MAP = {'est-estadio':'Estadio','est-petrolera':'Petrolera','est-sangerman':'San Germán','est-valiente':'Valiente','est-corsario':'Corsario','est-lomalinda':'Loma Linda','est-mg':'MG','est-sancarlos':'San Carlos','est-batuecas':'Batuecas','est-arcaza':'Arcaza','est-miramar':'Miramar'};
-const ESTACIONES = ['Estadio','Petrolera','San Germán','Valiente','Corsario','Loma Linda','MG','San Carlos','Batuecas','Arcaza','Miramar'];
-const SLA_HRS = {Alta:6,Media:48,Baja:120};
+let UNAMES={director:'Francisco',jefe:'Santiago Meza',mtto:'Mantenimiento Correctivo','sup-dayanara':'Dayanara Castillo','sup-juanmanuel':'Juan Manuel Osuna','sup-edgar':'Edgar Navarro',encargado:'Encargado de estación'};
+const SUP_ZONES={'sup-dayanara':['San Carlos','San Germán','MG','Loma Linda','Miramar'],'sup-juanmanuel':['Petrolera','Arcaza','Corsario','Estadio','Batuecas'],'sup-edgar':['Valiente']};
+const ESTACIONES=['Estadio','Petrolera','San Germán','Valiente','Corsario','Loma Linda','MG','San Carlos','Batuecas','Arcaza','Miramar'];
+const SLA_HRS={Alta:6,Media:48,Baja:120};
 
 window._DEFAULT_CATS = [
   {id:'c1',name:'Dispensario',active:true,subs:[
@@ -682,187 +608,145 @@ window._DEFAULT_CATS = [
   ]},
 ];
 
-// ── STATE (single declarations) ───────────────────────────
-window._CU = null;
-window._CR = null;
-window._tickets = [];
-window._cats = window._DEFAULT_CATS;
-
-let tFilter = 'todos';
-let tEstFilter = 'todas';
-let dashFilter = 'todos';
-let dashPeriod = 'mes';
-let miDashPeriod = 'mes';
-let nsUrgSel = '';
-let addSubCatId = '';
+// ── STATE ─────────────────────────────────────────────────
+window._CU=null; window._CR=null; window._tickets=[]; window._cats=window._DEFAULT_CATS; window._usuarios={};
+let dashPeriod='mes';
+let activeFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
+let pendingFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
+let nsUrgSel=''; let addSubCatId=''; let passUserKey='';
+let estChartOpen=false;
 
 // ── HELPERS ───────────────────────────────────────────────
 function getRole(u){
   if(u==='director'||u==='jefe') return u;
-  if(u.startsWith('tec-')) return 'tec';
+  if(u==='mtto'||u.startsWith('tec-')) return 'tec';
   if(u.startsWith('sup-')) return 'sup';
   return 'est';
 }
-
 function isMgr(){ return window._CR==='director'||window._CR==='jefe'; }
+function canWrite(){ return isMgr()||window._CR==='tec'||window._CR==='sup'; }
 
 function getPeriodRange(period){
-  const now = new Date();
+  const now=new Date();
   if(period==='semana'){
-    const day = now.getDay();
-    const monday = new Date(now); monday.setDate(now.getDate()-(day===0?6:day-1)); monday.setHours(0,0,0,0);
-    const sunday = new Date(monday); sunday.setDate(monday.getDate()+6); sunday.setHours(23,59,59,999);
-    return [monday.getTime(), sunday.getTime()];
+    const day=now.getDay(); const mon=new Date(now); mon.setDate(now.getDate()-(day===0?6:day-1)); mon.setHours(0,0,0,0);
+    const sun=new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
+    return [mon.getTime(),sun.getTime()];
   }
   if(period==='mes-ant'){
-    const start = new Date(now.getFullYear(), now.getMonth()-1, 1);
-    const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-    return [start.getTime(), end.getTime()];
+    return [new Date(now.getFullYear(),now.getMonth()-1,1).getTime(), new Date(now.getFullYear(),now.getMonth(),0,23,59,59,999).getTime()];
   }
-  // mes actual
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59, 999);
-  return [start.getTime(), end.getTime()];
+  return [new Date(now.getFullYear(),now.getMonth(),1).getTime(), new Date(now.getFullYear(),now.getMonth()+1,0,23,59,59,999).getTime()];
 }
 
 function getSLA(t){
   if(t.estado==='Cerrado') return{pct:100,status:'ok',label:'Cerrado'};
-  const waiting = t.estado==='Esperando Material';
-  const refTs = waiting&&t.tsWait ? t.tsWait : t.ts;
-  const max = (SLA_HRS[t.urg]||24)*3600000;
-  const el = Date.now()-refTs;
-  const pct = Math.min(100,Math.round(el/max*100));
-  const status = pct>=100?'over':pct>=75?'warn':'ok';
-  const hLeft = Math.max(0,(max-el)/3600000);
-  const label = pct>=100?'Vencido':hLeft<1?Math.round(hLeft*60)+'min':hLeft.toFixed(1)+'h';
-  return{pct,status,label,waiting};
+  const max=(SLA_HRS[t.urg]||24)*3600000;
+  const el=Date.now()-t.ts;
+  const pct=Math.min(100,Math.round(el/max*100));
+  const status=pct>=100?'over':pct>=75?'warn':'ok';
+  const hLeft=Math.max(0,(max-el)/3600000);
+  const label=pct>=100?'Vencido':hLeft<1?Math.round(hLeft*60)+'min':hLeft.toFixed(1)+'h';
+  return{pct,status,label};
 }
 
+function isVencido(t){ return t.estado!=='Cerrado'&&getSLA(t).status==='over'; }
 function fmtHrs(ms){ if(!ms||ms<=0)return'—'; const h=ms/3600000; return h<1?Math.round(h*60)+'min':h.toFixed(1)+'h'; }
 function elapsed(ts){ const m=Math.round((Date.now()-ts)/60000); if(m<60)return m+'m'; if(m<1440)return Math.round(m/60)+'h'; return Math.round(m/1440)+'d'; }
 function fmtDate(ts){ if(!ts)return''; return new Date(ts).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
-function urgBadge(u){ const m={Alta:'b-red',Media:'b-amber',Baja:'b-green'}; return`<span class="badge ${m[u]||'b-gray'}">${u}</span>`; }
-function estBadge(e){ const m={Abierto:'b-red',Asignado:'b-blue','En Proceso':'b-amber',Cerrado:'b-green','Esperando Material':'b-purple',Cancelado:'b-gray'}; return`<span class="badge ${m[e]||'b-gray'}">${e}</span>`; }
-function genId(){ const max=window._tickets.reduce((m,t)=>{const n=parseInt((t.id||'').split('-')[1])||0;return n>m?n:m;},0); return'MT-'+String(max+1).padStart(3,'0'); }
-function shortName(n){ return(n||'').split(' ').slice(0,2).join(' '); }
+function pct(n,t){ return t>0?Math.round(n/t*100):0; }
 function getCat(id){ return(window._cats||[]).find(c=>c.id===id); }
-function pct(num,total){ return total>0?Math.round(num/total*100):0; }
+function genId(){ const mx=window._tickets.reduce((m,t)=>{const n=parseInt((t.id||'').split('-')[1])||0;return n>m?n:m;},0); return'MT-'+String(mx+1).padStart(3,'0'); }
+function shortName(n){ return(n||'').split(' ').slice(0,2).join(' '); }
 function todayStart(){ const d=new Date();d.setHours(0,0,0,0);return d.getTime(); }
+
+function urgBadge(u){ const m={Alta:'b-red',Media:'b-amber',Baja:'b-green'}; return`<span class="badge ${m[u]||'b-gray'}">${u}</span>`; }
+function estadoBadge(e){
+  const m={Abierto:'b-blue','En Proceso':'b-amber',Cerrado:'b-green'};
+  return`<span class="badge ${m[e]||'b-gray'}">${e}</span>`;
+}
 
 function fbUpd(key,data){ if(window._db)window._update(window._ref(window._db,`tickets/${key}`),data); }
 function fbSet(path,data){ if(window._db)window._set(window._ref(window._db,path),data); }
 
-// Bitácora permanente de plan diario: queda registrado aunque el ticket se cierre o se quite del plan visible
-function logPlanEntry(ticket,fecha){
-  if(!window._db||!ticket||!ticket.tec)return;
-  const dia = fecha || todayStart();
-  const entryKey = (ticket._key||ticket.id)+'_'+dia;
-  const path = `planHistorial/${dia}/${entryKey}`;
-  window._set(window._ref(window._db,path), {
-    ticketKey: ticket._key||ticket.id,
-    ticketId: ticket.id,
-    tec: ticket.tec,
-    est: ticket.est,
-    cat: ticket.cat,
-    sub: ticket.sub,
-    urg: ticket.urg,
-    fecha: dia,
-    ts: Date.now()
-  });
-}
-
-function _refreshCurrentView(){
-  const v = document.querySelector('.view.on');
-  if(!v) return;
-  const vid = v.id;
-  if(vid==='v-dash') renderDash();
-  if(vid==='v-tickets') renderTickets();
-  if(vid==='v-mis') renderMis();
-  if(vid==='v-plan') renderPlan();
-  if(vid==='v-est') renderEst();
-  if(vid==='v-mi-dash') renderMiDash();
-  if(vid==='v-usuarios') renderUsuarios();
-  updateBadge();
-}
-
 function sortTickets(list){
   return list.sort((a,b)=>{
-    if(a.pin&&!b.pin)return -1; if(!a.pin&&b.pin)return 1;
-    const as=getSLA(a),bs=getSLA(b);
-    if(as.status==='over'&&bs.status!=='over')return -1; if(bs.status==='over'&&as.status!=='over')return 1;
+    if(isVencido(a)&&!isVencido(b))return -1; if(isVencido(b)&&!isVencido(a))return 1;
     const o={Alta:0,Media:1,Baja:2};
     if(o[a.urg]!==o[b.urg])return o[a.urg]-o[b.urg];
-    if(as.status==='warn'&&bs.status!=='warn')return -1; if(bs.status==='warn'&&as.status!=='warn')return 1;
     if(a.estado==='Cerrado'&&b.estado!=='Cerrado')return 1; if(b.estado==='Cerrado'&&a.estado!=='Cerrado')return -1;
     return a.ts-b.ts;
   });
 }
 
+function _refreshCurrentView(){
+  const v=document.querySelector('.view.on'); if(!v)return;
+  const vid=v.id;
+  if(vid==='v-dash') renderDash();
+  if(vid==='v-tickets') renderTickets();
+  updateBadge();
+}
+
 // ── AUTH ──────────────────────────────────────────────────
 function populateLoginSelect(){
   const sel=document.getElementById('au'); if(!sel)return;
-  // Respaldo: si no hay usuarios cargados, usar los predeterminados
   if(!window._usuarios||Object.keys(window._usuarios).length===0){
     window._usuarios=JSON.parse(JSON.stringify(window._DEFAULT_USUARIOS));
-    Object.keys(window._usuarios).forEach(k=>{ UNAMES[k]=window._usuarios[k].nombre; });
+    Object.keys(window._usuarios).forEach(k=>{UNAMES[k]=window._usuarios[k].nombre;});
   }
-  const prevVal=sel.value;
   const groups={director:{label:'Dirección',items:[]},jefe:{label:'Mantenimiento',items:[]},tec:{label:'Mantenimiento',items:[]},sup:{label:'Supervisores',items:[]},est:{label:'Estaciones',items:[]}};
   let encargadoAdded=false;
   Object.entries(window._usuarios).forEach(([key,u])=>{
-    if(u.activo===false) return;
-    // Claves est-* heredadas de Firebase (versión anterior): consolidar en una sola entrada genérica
+    if(u.activo===false)return;
     if(key.startsWith('est-')||u.rol==='est'){
-      if(!encargadoAdded){ groups.est.items.push({key:'encargado',nombre:'Encargado de estación'}); encargadoAdded=true; }
+      if(!encargadoAdded){groups.est.items.push({key:'encargado',nombre:'Encargado de estación'});encargadoAdded=true;}
       return;
     }
-    const g=groups[u.rol]||groups[key==='director'?'director':'est'];
+    const g=groups[u.rol]||groups['est'];
     if(g) g.items.push({key,nombre:u.nombre});
   });
   let html='<option value="">— Selecciona —</option>';
-  const order=['director','jefe','tec','sup','est'];
   const seenLabels=new Set();
-  order.forEach(roleKey=>{
-    const g=groups[roleKey]; if(!g||!g.items.length)return;
+  ['director','jefe','tec','sup','est'].forEach(rk=>{
+    const g=groups[rk]; if(!g||!g.items.length)return;
     if(seenLabels.has(g.label))return;
     seenLabels.add(g.label);
     let items=[...g.items];
-    if(roleKey==='jefe') items=items.concat(groups.tec.items);
+    if(rk==='jefe') items=items.concat(groups.tec.items);
     html+=`<optgroup label="${g.label}">`+items.map(it=>`<option value="${it.key}">${it.nombre}</option>`).join('')+`</optgroup>`;
   });
   sel.innerHTML=html;
-  if(prevVal) sel.value=prevVal;
+  // Show/hide password field based on selection
+  sel.onchange=()=>{
+    const isEst=sel.value==='encargado'||(window._usuarios[sel.value]||{}).rol==='est';
+    document.getElementById('pass-wrap').style.display=isEst?'none':'block';
+  };
 }
 
 function doLogin(){
-  const u = document.getElementById('au').value;
-  const pass = document.getElementById('au-pass').value;
-  const errEl = document.getElementById('aerr');
-  if(!u){ errEl.textContent='Selecciona tu perfil.'; errEl.style.display='block'; return; }
-  // Encargado: entrada libre sin contraseña, aunque la clave aún no exista en Firebase
+  const u=document.getElementById('au').value;
+  const errEl=document.getElementById('aerr');
+  if(!u){errEl.textContent='Selecciona tu perfil.';errEl.style.display='block';return;}
   if(u==='encargado'){
     if(window._usuarios&&!window._usuarios['encargado']){
       window._usuarios['encargado']={nombre:'Encargado de estación',rol:'est',pass:''};
       fbSet('usuarios',window._usuarios);
     }
-    errEl.style.display='none';
-    window._CU='encargado'; window._CR='est';
-    try{ sessionStorage.setItem('fg_u','encargado'); }catch(e){}
-    startApp(); return;
+    errEl.style.display='none'; window._CU='encargado'; window._CR='est';
+    try{sessionStorage.setItem('fg_u','encargado');}catch(e){} startApp(); return;
   }
-  const usr = (window._usuarios||{})[u];
-  if(!usr){ errEl.textContent='Usuario no encontrado.'; errEl.style.display='block'; return; }
-  if(!pass){ errEl.textContent='Ingresa tu contraseña.'; errEl.style.display='block'; return; }
-  if(usr.pass!==pass){ errEl.textContent='Contraseña incorrecta.'; errEl.style.display='block'; return; }
-  if(usr.activo===false){ errEl.textContent='Este usuario fue dado de baja. Contacta a tu gerente.'; errEl.style.display='block'; return; }
-  errEl.style.display='none';
-  window._CU=u; window._CR=getRole(u);
-  try{ sessionStorage.setItem('fg_u',u); }catch(e){}
-  startApp();
+  const pass=document.getElementById('au-pass').value;
+  const usr=(window._usuarios||{})[u];
+  if(!usr){errEl.textContent='Usuario no encontrado.';errEl.style.display='block';return;}
+  if(!pass){errEl.textContent='Ingresa tu contraseña.';errEl.style.display='block';return;}
+  if(usr.pass!==pass){errEl.textContent='Contraseña incorrecta.';errEl.style.display='block';return;}
+  if(usr.activo===false){errEl.textContent='Usuario dado de baja. Contacta a tu gerente.';errEl.style.display='block';return;}
+  errEl.style.display='none'; window._CU=u; window._CR=getRole(u);
+  try{sessionStorage.setItem('fg_u',u);}catch(e){} startApp();
 }
 
 function logout(){
-  try{ sessionStorage.removeItem('fg_u'); }catch(e){}
+  try{sessionStorage.removeItem('fg_u');}catch(e){}
   window._CU=null; window._CR=null;
   document.getElementById('app').classList.remove('on');
   document.getElementById('auth').style.display='flex';
@@ -872,79 +756,69 @@ function logout(){
 function startApp(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').classList.add('on');
-  const name = UNAMES[window._CU]||window._CU;
+  const name=UNAMES[window._CU]||window._CU;
   document.getElementById('tb-user').textContent=name;
   document.getElementById('sb-user').textContent=name;
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
   populateSelects(); buildNav();
-  if(window._CR==='est'){ showView('rep'); }
-  else if(window._CR==='tec'){ showView('plan'); renderPlan(); }
-  else{ showView('dash'); renderDash(); }
-}
-
-function presetEst(){
-  const en = EST_MAP[window._CU]||'';
-  const sel = document.getElementById('r-est');
-  for(let o of sel.options){ if(o.value===en){ o.selected=true; break; } }
+  if(window._CR==='est'){showView('tickets');renderTickets();}
+  else{showView('dash');renderDash();}
+  // Build estacion chips for filter panel
+  const fc=document.getElementById('fp-est-chips');
+  if(fc) fc.innerHTML='<button class="fchip on" onclick="setFChip(this,\'est\',\'todas\')">Todas</button>'+ESTACIONES.map(e=>`<button class="fchip" onclick="setFChip(this,'est','${e}')">${e}</button>`).join('');
 }
 
 function buildNav(){
-  const cr = window._CR;
-  let items = [];
-  if(isMgr()) items=[{i:'ti-layout-dashboard',l:'Dashboard',v:'dash'},{i:'ti-ticket',l:'Tickets',v:'tickets'},{i:'ti-calendar-stats',l:'Planes',v:'planes'},{i:'ti-circle-plus',l:'Nuevo',v:'rep'},{i:'ti-settings',l:'Config',v:'cfg'},{i:'ti-users-group',l:'Usuarios',v:'usuarios'}];
-  else if(cr==='sup') items=[{i:'ti-layout-dashboard',l:'Dashboard',v:'dash'},{i:'ti-ticket',l:'Tickets',v:'tickets'}];
-  else if(cr==='tec') items=[{i:'ti-clipboard-check',l:'Plan del día',v:'plan'},{i:'ti-ticket',l:'Mis tickets',v:'mis'},{i:'ti-chart-bar',l:'Mi desempeño',v:'mi-dash'}];
-  else items=[{i:'ti-circle-plus',l:'Reportar',v:'rep'},{i:'ti-list',l:'Mis tickets',v:'est'}];
-  const nb = document.getElementById('bnav');
+  const cr=window._CR;
+  // Base nav para todos
+  let items=[
+    {i:'ti-layout-dashboard',l:'Dashboard',v:'dash'},
+    {i:'ti-ticket',l:'Tickets',v:'tickets'},
+    {i:'ti-circle-plus',l:'Levantar ticket',v:'rep'},
+  ];
+  if(isMgr()){
+    items.push({i:'ti-settings',l:'Config',v:'cfg'});
+    items.push({i:'ti-users-group',l:'Usuarios',v:'usuarios'});
+  }
+  const nb=document.getElementById('bnav');
   nb.innerHTML=items.map(it=>`<button class="ni" onclick="navTo('${it.v}',this)"><i class="ti ${it.i}"></i><span>${it.l}</span></button>`).join('');
-  const sbn = document.getElementById('sb-nav');
+  const sbn=document.getElementById('sb-nav');
   sbn.innerHTML=items.map(it=>`<button class="sni" onclick="navTo('${it.v}',this)"><i class="ti ${it.i}"></i>${it.l}</button>`).join('');
   updateBadge();
 }
 
 function navTo(v,el){
   document.querySelectorAll('.ni,.sni').forEach(n=>n.classList.remove('active'));
-  if(el) el.classList.add('active');
+  if(el)el.classList.add('active');
   showView(v);
-  if(v==='dash') renderDash();
-  if(v==='tickets') renderTickets();
-  if(v==='mis') renderMis();
-  if(v==='plan') renderPlan();
-  if(v==='cfg') renderCfg();
-  if(v==='usuarios') renderUsuarios();
-  if(v==='planes'){ loadPlanHistorial(); }
-  if(v==='est') renderEst();
-  if(v==='mi-dash') renderMiDash();
+  if(v==='dash')renderDash();
+  if(v==='tickets')renderTickets();
+  if(v==='cfg')renderCfg();
+  if(v==='usuarios')renderUsuarios();
 }
 
 function showView(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
   const el=document.getElementById('v-'+v);
-  if(el) el.classList.add('on');
+  if(el)el.classList.add('on');
 }
 
 function updateBadge(){
-  const venc=window._tickets.filter(t=>t.estado!=='Cerrado'&&getSLA(t).status==='over').length;
-  document.querySelectorAll('.ni,.sni').forEach(ni=>{ const b=ni.querySelector('.nbadge');if(b)b.remove(); });
+  const venc=window._tickets.filter(t=>isVencido(t)).length;
+  document.querySelectorAll('.ni,.sni').forEach(ni=>{const b=ni.querySelector('.nbadge');if(b)b.remove();});
   if(venc>0&&(isMgr()||window._CR==='sup')){
-    document.querySelectorAll('.ni,.sni').forEach(ni=>{ if((ni.getAttribute('onclick')||'').includes("'dash'")) ni.insertAdjacentHTML('beforeend',`<span class="nbadge">${venc}</span>`); });
-  }
-  // Notificación plan del día para técnicos
-  if(window._CR==='tec'){
-    const myName=TEC_MAP[window._CU]||'';
-    const hoy=todayStart();
-    const nuevos=window._tickets.filter(t=>t.tec===myName&&t.planDia&&t.planForzadoTs&&t.planForzadoTs>hoy&&!t.planVisto).length;
-    if(nuevos>0){
-      document.querySelectorAll('.ni,.sni').forEach(ni=>{ if((ni.getAttribute('onclick')||'').includes("'plan'")) ni.insertAdjacentHTML('beforeend',`<span class="nbadge">${nuevos}</span>`); });
-    }
+    document.querySelectorAll('.ni,.sni').forEach(ni=>{
+      if((ni.getAttribute('onclick')||'').includes("'dash'"))
+        ni.insertAdjacentHTML('beforeend',`<span class="nbadge">${venc}</span>`);
+    });
   }
 }
 
 // ── SELECTS ───────────────────────────────────────────────
 function populateSelects(){
   const ac=(window._cats||[]).filter(c=>c.active);
-  ['r-est','n-est'].forEach(id=>{ const s=document.getElementById(id);if(!s)return; s.innerHTML='<option value="">— Selecciona —</option>'+ESTACIONES.map(e=>`<option value="${e}">${e}</option>`).join(''); });
-  ['r-cat','n-cat'].forEach(id=>{ const s=document.getElementById(id);if(!s)return; s.innerHTML='<option value="">— Selecciona —</option>'+ac.map(c=>`<option value="${c.id}">${c.name}</option>`).join(''); });
+  ['r-est','n-est'].forEach(id=>{const s=document.getElementById(id);if(!s)return; s.innerHTML='<option value="">— Selecciona —</option>'+ESTACIONES.map(e=>`<option value="${e}">${e}</option>`).join('');});
+  ['r-cat','n-cat'].forEach(id=>{const s=document.getElementById(id);if(!s)return; s.innerHTML='<option value="">— Selecciona —</option>'+ac.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');});
 }
 
 function loadSubs(catSel,subSel){
@@ -955,8 +829,7 @@ function loadSubs(catSel,subSel){
   sub.innerHTML='<option value="">— Selecciona tipo de falla —</option>'+cat.subs.filter(s=>s.active).map(s=>`<option value="${s.id}" data-urg="${s.urg}" data-hint="${s.hint||''}">${s.name}</option>`).join('');
   if(catSel==='r-cat'){
     sub.onchange=()=>{
-      const opt=sub.options[sub.selectedIndex];
-      const hint=opt?.dataset.hint||'';
+      const opt=sub.options[sub.selectedIndex]; const hint=opt?.dataset.hint||'';
       const hw=document.getElementById('r-hint-wrap');
       if(hint){document.getElementById('r-hint-txt').textContent=hint;hw.style.display='block';}
       else hw.style.display='none';
@@ -968,232 +841,224 @@ function loadSubs(catSel,subSel){
 function setPeriod(p,el){
   dashPeriod=p;
   document.querySelectorAll('#v-dash .period-row .period-btn').forEach(b=>b.classList.remove('on'));
-  if(el) el.classList.add('on');
+  if(el)el.classList.add('on');
   renderDash();
 }
 
-function setDashFilter(f,el){
-  dashFilter=f;
-  document.querySelectorAll('#dash-filters .fc').forEach(b=>b.classList.remove('on'));
-  if(el) el.classList.add('on');
-  renderDash();
+function toggleEstChart(){
+  estChartOpen=!estChartOpen;
+  const el=document.getElementById('bar-est');
+  const ch=document.getElementById('est-chevron');
+  if(el) el.style.display=estChartOpen?'block':'none';
+  if(ch) ch.className='ti '+(estChartOpen?'ti-chevron-up':'ti-chevron-down')+' ';
+  if(estChartOpen) renderEstChart();
 }
 
-function getFilteredTickets(){
-  let base = window._tickets;
-  if(window._CR==='sup') base=base.filter(t=>(SUP_ZONES[window._CU]||[]).includes(t.est));
-  if(dashFilter!=='todos'&&dashFilter!=='tec') base=base.filter(t=>t.est===dashFilter);
-  return base;
-}
-
-function goToTickets(f){
-  tFilter=f; navTo('tickets',null);
-  document.querySelectorAll('#t-filters .fc').forEach(b=>{ b.classList.remove('on'); if((b.getAttribute('onclick')||'').includes(`'${f}'`)) b.classList.add('on'); });
-  renderTickets();
+function renderEstChart(){
+  const [pStart,pEnd]=getPeriodRange(dashPeriod);
+  const inP=window._tickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
+  const ec={};ESTACIONES.forEach(e=>{ec[e]=inP.filter(t=>t.est===e).length;});
+  const mx=Math.max(...Object.values(ec),1);
+  const sorted=ESTACIONES.filter(e=>ec[e]>0).sort((a,b)=>ec[b]-ec[a]);
+  document.getElementById('bar-est').innerHTML=sorted.length?sorted.map(e=>`<div class="br"><span class="bl">${e}</span><div class="bt"><div class="bf" style="width:${Math.round(ec[e]/mx*100)}%"></div></div><span class="bn">${ec[e]}</span></div>`).join(''):'<p style="font-size:12px;color:var(--g400)">Sin datos</p>';
 }
 
 function renderDash(){
-  const [pStart,pEnd] = getPeriodRange(dashPeriod);
-  const prevMonth = dashPeriod==='mes' ? getPeriodRange('mes-ant') : null;
-  const ft = getFilteredTickets();
-  const inPeriod = ft.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
-  const total = inPeriod.length || 1;
-  const ab = inPeriod.filter(t=>t.estado==='Abierto').length;
-  const pr = inPeriod.filter(t=>['En Proceso','Asignado','Esperando Material'].includes(t.estado)).length;
-  const ce = inPeriod.filter(t=>t.estado==='Cerrado').length;
-  const ve = inPeriod.filter(t=>t.estado!=='Cerrado'&&getSLA(t).status==='over').length;
-  const em = inPeriod.filter(t=>t.estado==='Esperando Material').length;
-  // % cumplimiento SLA: cerrados a tiempo
-  const cerrados = inPeriod.filter(t=>t.estado==='Cerrado'&&t.tsC&&t.ts);
-  const aTiempo = cerrados.filter(t=>{const max=(SLA_HRS[t.urg]||24)*3600000;return(t.tsC-t.ts)<=max;}).length;
-  const pctSLA = cerrados.length>0 ? Math.round(aTiempo/cerrados.length*100) : 0;
-
-  const totalReal = inPeriod.length;
-  const conTec = inPeriod.filter(t=>t.tec&&t.estado!=='Cerrado').length;
-  const sinTec = inPeriod.filter(t=>!t.tec&&t.estado!=='Cerrado').length;
+  const [pStart,pEnd]=getPeriodRange(dashPeriod);
+  const inP=window._tickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
+  const total=inP.length||1;
+  const ab=inP.filter(t=>t.estado==='Abierto').length;
+  const pr=inP.filter(t=>t.estado==='En Proceso').length;
+  const ce=inP.filter(t=>t.estado==='Cerrado').length;
+  const ve=inP.filter(t=>isVencido(t)).length;
 
   document.getElementById('kpi-grid').innerHTML=`
-    <div class="kpi kpi-blue"><div class="kpi-lbl">Total período</div><div class="kpi-val">${totalReal}</div><div class="kpi-pct" style="color:var(--blue)">100%</div><div class="kpi-sub">todos los estados</div></div>
-    <div class="kpi kpi-green" onclick="goToTickets('Asignado')"><div class="kpi-lbl">Asignados</div><div class="kpi-val">${conTec}</div><div class="kpi-pct" style="color:var(--green)">${pct(conTec,totalReal||1)}%</div><div class="kpi-sub">tienen técnico activo</div></div>
-    <div class="kpi kpi-red" onclick="goToTickets('Abierto')"><div class="kpi-lbl">Sin asignar</div><div class="kpi-val">${sinTec}</div><div class="kpi-pct" style="color:var(--red)">${pct(sinTec,totalReal||1)}%</div><div class="kpi-sub">sin técnico asignado</div></div>
-    <div class="kpi kpi-blue" onclick="goToTickets('Abierto')"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-pct" style="color:var(--blue)">${pct(ab,totalReal||1)}%</div><div class="kpi-sub">del total del período</div></div>
-    <div class="kpi kpi-amber" onclick="goToTickets('proceso')"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-pct" style="color:var(--amber)">${pct(pr,totalReal||1)}%</div><div class="kpi-sub">del total del período</div></div>
-    <div class="kpi kpi-green" onclick="goToTickets('Cerrado')"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div><div class="kpi-pct" style="color:var(--green)">${pct(ce,totalReal||1)}%</div><div class="kpi-sub">del total del período</div></div>
-    <div class="kpi kpi-red" onclick="goToTickets('vencido')"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-pct" style="color:var(--red)">${pct(ve,totalReal||1)}%</div><div class="kpi-sub">superaron SLA</div></div>
-    <div class="kpi kpi-purple" onclick="goToTickets('Esperando Material')"><div class="kpi-lbl">Esp. material</div><div class="kpi-val">${em}</div><div class="kpi-pct" style="color:var(--purple)">${pct(em,totalReal||1)}%</div><div class="kpi-sub">del total</div></div>
-    <div class="kpi kpi-green"><div class="kpi-lbl">% Cumplimiento SLA</div><div class="kpi-val">${pctSLA}%</div><div class="kpi-pct" style="color:var(--green)">${aTiempo}/${cerrados.length}</div><div class="kpi-sub">cerrados a tiempo</div></div>`;
+    <div class="kpi kpi-blue"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-sub">${pct(ab,total)}% del período</div></div>
+    <div class="kpi kpi-amber"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-sub">${pct(pr,total)}% del período</div></div>
+    <div class="kpi kpi-green"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div><div class="kpi-sub">${pct(ce,total)}% del período</div></div>
+    <div class="kpi kpi-red"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-sub">${pct(ve,total)}% del total</div></div>`;
 
   // Tiempos promedio
-  const avgC = cerrados.length ? fmtHrs(cerrados.reduce((s,t)=>s+(t.tsC-t.ts),0)/cerrados.length) : '—';
-  const cAsig = cerrados.filter(t=>t.tsA&&t.tsC);
-  const avgA = cAsig.length ? fmtHrs(cAsig.reduce((s,t)=>s+(t.tsC-t.tsA),0)/cAsig.length) : '—';
-
-  // Tiempo promedio de asignación de Santiago (solo para director)
-  const stiagnoName = 'Santiago Meza';
-  const ticketsParaAsignar = inPeriod.filter(t=>t.tsA&&t.ts);
-  // Todos los tickets del período que fueron asignados — Santiago es quien asigna, independiente del técnico asignado
-  const avgSantiagoAsig = ticketsParaAsignar.length ? fmtHrs(ticketsParaAsignar.reduce((s,t)=>s+(t.tsA-t.ts),0)/ticketsParaAsignar.length) : '—';
-  const santiagoBlock = window._CR==='director' ? `<div style="flex:1;padding:10px;text-align:center;border-left:2px solid var(--blue);background:var(--blue-l)"><div style="font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Prom. asignación (Santiago)</div><div style="font-size:18px;font-weight:800;color:var(--blue)">${avgSantiagoAsig}</div><div style="font-size:9px;color:var(--g500);margin-top:2px">${ticketsParaAsignar.length} tickets con tsA</div></div>` : '';
-
+  const cerrados=inP.filter(t=>t.estado==='Cerrado'&&t.tsC&&t.ts);
+  const avgC=cerrados.length?fmtHrs(cerrados.reduce((s,t)=>s+(t.tsC-t.ts),0)/cerrados.length):'—';
+  const cConR=cerrados.filter(t=>t.tsI);
+  const avgR=cConR.length?fmtHrs(cConR.reduce((s,t)=>s+(t.tsC-t.tsI),0)/cConR.length):'—';
+  const isDir=window._CR==='director';
+  const ticketsConTs=inP.filter(t=>t.tsI&&t.ts);
+  const avgResp=ticketsConTs.length?fmtHrs(ticketsConTs.reduce((s,t)=>s+(t.tsI-t.ts),0)/ticketsConTs.length):'—';
   document.getElementById('dash-avgs').innerHTML=`
-    <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Desde creación</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgC}</div></div>
-    <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Desde asignación</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgA}</div></div>
-    <div style="flex:1;padding:10px;text-align:center${window._CR==='director'?';border-right:1px solid var(--g200)':''}"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Total período</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${inPeriod.length}</div></div>${santiagoBlock}`;
+    <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Tiempo resolución</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgC}</div></div>
+    <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Tiempo atención</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgR}</div></div>
+    <div style="flex:1;padding:10px;text-align:center${isDir?';border-right:1px solid var(--g200)':''}"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Total período</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${inP.length}</div></div>
+    ${isDir?`<div style="flex:1;padding:10px;text-align:center;background:var(--blue-l)"><div style="font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:3px">Prom. 1ra respuesta</div><div style="font-size:18px;font-weight:800;color:var(--blue)">${avgResp}</div></div>`:''}`;
 
-  // Bar estaciones
-  if(dashFilter==='tec'){
-    document.getElementById('bar-est').innerHTML='<p style="font-size:12px;color:var(--g400)">Ver tabla de técnicos abajo</p>';
-  } else {
-    const ec={};ESTACIONES.forEach(e=>{ec[e]=ft.filter(t=>t.est===e&&t.estado!=='Cerrado').length;});
-    const mx=Math.max(...Object.values(ec),1);
-    const sorted=ESTACIONES.filter(e=>ec[e]>0).sort((a,b)=>ec[b]-ec[a]);
-    document.getElementById('bar-est').innerHTML=sorted.length?sorted.map(e=>`<div class="br"><span class="bl">${e}</span><div class="bt"><div class="bf" style="width:${Math.round(ec[e]/mx*100)}%"></div></div><span class="bn">${ec[e]}</span></div>`).join(''):'<p style="font-size:12px;color:var(--g400)">Sin tickets activos</p>';
-  }
-
-  // Tabla técnicos
-  const hoy = todayStart();
-  document.getElementById('tbody-tec').innerHTML=getAllTecnicos().map(tec=>{
-    const planHoy = ft.filter(t=>t.tec===tec&&t.planDia&&t.planDiaFecha>=hoy&&t.estado!=='Cerrado').length;
-    const asig = ft.filter(t=>t.tec===tec&&t.estado!=='Cerrado').length;
-    const cerr = inPeriod.filter(t=>t.tec===tec&&t.estado==='Cerrado').length;
-    const cl = inPeriod.filter(t=>t.tec===tec&&t.estado==='Cerrado'&&t.tsC&&t.ts);
-    const avgCt = cl.length ? fmtHrs(cl.reduce((s,t)=>s+(t.tsC-t.ts),0)/cl.length) : '—';
-    const cla = cl.filter(t=>t.tsA);
-    const avgAt = cla.length ? fmtHrs(cla.reduce((s,t)=>s+(t.tsC-t.tsA),0)/cla.length) : '—';
-    return`<tr><td>${shortName(tec)}</td><td class="nr" style="color:var(--blue);font-weight:700">${planHoy}</td><td class="nr">${asig}</td><td class="nr">${cerr}</td><td class="nr">${avgCt}</td><td class="nr">${avgAt}</td></tr>`;
-  }).join('');
-
-  // Bar tipos
-  const tipos={};inPeriod.forEach(t=>{tipos[t.cat]=(tipos[t.cat]||0)+1;});
+  // Fallas frecuentes
+  const tipos={};inP.forEach(t=>{tipos[t.cat]=(tipos[t.cat]||0)+1;});
   const mx2=Math.max(...Object.values(tipos),1);
   document.getElementById('bar-tipos').innerHTML=Object.entries(tipos).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([tipo,cnt])=>`<div class="br"><span class="bl">${tipo}</span><div class="bt"><div class="bf" style="width:${Math.round(cnt/mx2*100)}%"></div></div><span class="bn">${cnt}</span></div>`).join('');
 
+  if(estChartOpen) renderEstChart();
   updateBadge();
 }
 
-// ── TICKET LIST ───────────────────────────────────────────
-function renderTickets(){
-  // Base completa del rol (supervisor ve solo su zona)
-  let base=[...window._tickets];
-  if(window._CR==='sup'){const z=SUP_ZONES[window._CU]||[];base=base.filter(t=>z.includes(t.est));}
-
-  const mesActStart = getPeriodRange('mes')[0];
-
-  // Base filtrada por estacion (para calcular conteos de estado)
-  const baseByEst = tEstFilter==='todas' ? base : base.filter(t=>t.est===tEstFilter);
-  // Base filtrada por estado (para calcular conteos de estacion)
-  const baseByStatus = applyStatusFilter(base, tFilter);
-
-  // Actualizar conteos en filtros de estado
-  const statusCounts = {
-    todos: baseByEst.length,
-    Abierto: baseByEst.filter(t=>t.estado==='Abierto').length,
-    Asignado: baseByEst.filter(t=>t.estado==='Asignado').length,
-    'En Proceso': baseByEst.filter(t=>t.estado==='En Proceso').length,
-    'Esperando Material': baseByEst.filter(t=>t.estado==='Esperando Material').length,
-    Cerrado: baseByEst.filter(t=>t.estado==='Cerrado').length,
-    vencido: baseByEst.filter(t=>t.estado!=='Cerrado'&&getSLA(t).status==='over').length,
-    prioridad: baseByEst.filter(t=>t.pin).length,
-  };
-  const statusLabels = {todos:'Todos',Abierto:'Abiertos',Asignado:'Asignados','En Proceso':'En proceso','Esperando Material':'Esp. material',Cerrado:'Cerrados',vencido:'🔴 Vencidos',prioridad:'⭐ Prioridad'};
-  document.querySelectorAll('#t-filters .fc').forEach(btn=>{
-    const oc=btn.getAttribute('onclick')||'';
-    const m=oc.match(/filterT\('([^']+)'/);
-    if(m){const key=m[1]; const n=statusCounts[key]; if(n!==undefined) btn.textContent=statusLabels[key]+' ('+n+')';}
-  });
-
-  // Actualizar conteos en filtros de estacion
-  document.querySelectorAll('#t-est-filters .fc').forEach(btn=>{
-    const oc=btn.getAttribute('onclick')||'';
-    const m=oc.match(/filterTEst\('([^']+)'/);
-    if(m){
-      const key=m[1];
-      const n = key==='todas' ? baseByStatus.length : baseByStatus.filter(t=>t.est===key).length;
-      const label = key==='todas'?'Todas':key;
-      btn.textContent=label+' ('+n+')';
-    }
-  });
-
-  // Lista final con ambos filtros aplicados
-  let list = applyStatusFilter(baseByEst, tFilter);
-  sortTickets(list);
-  const el=document.getElementById('tcount'); if(el)el.textContent=list.length+' ticket'+(list.length!==1?'s':'');
-  const c=document.getElementById('tlist'); if(!c)return;
-  c.innerHTML=list.length?list.map(t=>ticketCard(t,mesActStart)).join(''):'<div class="empty"><i class="ti ti-circle-check"></i><p>Sin tickets en esta categoría</p></div>';
+// ── TICKETS ───────────────────────────────────────────────
+function setStatusFilter(val, el){
+  activeFilters.estado=val;
+  document.querySelectorAll('#v-tickets .period-btn').forEach(b=>b.classList.remove('on'));
+  if(el) el.classList.add('on');
+  renderTickets();
 }
 
-function applyStatusFilter(list, f){
-  if(f==='vencido') return list.filter(t=>t.estado!=='Cerrado'&&getSLA(t).status==='over');
-  if(f==='prioridad') return list.filter(t=>t.pin);
-  if(f==='proceso') return list.filter(t=>['En Proceso','Asignado','Esperando Material'].includes(t.estado));
-  if(f!=='todos') return list.filter(t=>t.estado===f);
+function applyFiltersToList(list){
+  const f=activeFilters;
+  if(f.estado==='vencido') list=list.filter(t=>isVencido(t));
+  else if(f.estado!=='todos') list=list.filter(t=>t.estado===f.estado);
+  if(f.urg!=='todas') list=list.filter(t=>t.urg===f.urg);
+  if(f.est!=='todas') list=list.filter(t=>t.est===f.est);
+  if(f.edad!=='todas'){
+    const now=Date.now();
+    const limits={hoy:todayStart(),d3:now-3*86400000,d7:now-7*86400000,d30:now-30*86400000};
+    const key={hoy:'hoy','3d':'d3','7d':'d7','30d':'d30'}[f.edad];
+    if(key==='hoy') list=list.filter(t=>t.ts>=todayStart());
+    else if(limits[key]) list=list.filter(t=>t.ts>=limits[key]);
+  }
   return list;
 }
 
-function filterTEst(e,el){ tEstFilter=e; document.querySelectorAll('#t-est-filters .fc').forEach(b=>b.classList.remove('on')); if(el)el.classList.add('on'); renderTickets(); }
+function hasActiveFilters(){
+  const f=activeFilters;
+  return f.estado!=='todos'||f.urg!=='todas'||f.est!=='todas'||f.edad!=='todas';
+}
 
-function ticketCard(t, mesActStart){
+function renderTickets(){
+  let base=[...window._tickets];
+  if(window._CR==='sup'){const z=SUP_ZONES[window._CU]||[];base=base.filter(t=>z.includes(t.est));}
+  let list=applyFiltersToList(base);
+
+  // Update filter button appearance
+  const btn=document.getElementById('filter-toggle-btn');
+  if(btn) btn.className='filter-btn'+(hasActiveFilters()?' active':'');
+
+  sortTickets(list);
+  const countEl=document.getElementById('tcount');
+  if(countEl) countEl.textContent=list.length+' ticket'+(list.length!==1?'s':'');
+
+  const c=document.getElementById('tlist'); if(!c)return;
+  if(list.length===0){c.innerHTML='<div class="empty"><i class="ti ti-circle-check"></i><p>Sin tickets con estos filtros</p></div>';return;}
+
+  // Group by estación
+  const byEst={};
+  ESTACIONES.forEach(e=>{byEst[e]=[];});
+  list.forEach(t=>{ if(byEst[t.est]) byEst[t.est].push(t); });
+
+  c.innerHTML=ESTACIONES.filter(e=>byEst[e].length>0).map(est=>{
+    const tks=byEst[est];
+    const ab=tks.filter(t=>t.estado==='Abierto').length;
+    const pr=tks.filter(t=>t.estado==='En Proceso').length;
+    const ce=tks.filter(t=>t.estado==='Cerrado').length;
+    const ve=tks.filter(t=>isVencido(t)).length;
+    const total=tks.length;
+    const pills=[
+      ab?`<span class="est-pill pill-blue">Abiertos ${ab} · ${pct(ab,total)}%</span>`:'',
+      pr?`<span class="est-pill pill-amber">En proceso ${pr} · ${pct(pr,total)}%</span>`:'',
+      ce?`<span class="est-pill pill-green">Cerrados ${ce} · ${pct(ce,total)}%</span>`:'',
+      ve?`<span class="est-pill pill-red">🔴 Vencidos ${ve}</span>`:'',
+    ].filter(Boolean).join('');
+    const cards=tks.map(t=>ticketCard(t)).join('');
+    return`<div class="est-group"><div class="est-header"><span class="est-name"><i class="ti ti-building-store" style="font-size:13px;margin-right:5px;color:var(--g400)"></i>${est}</span><div class="est-pills">${pills}</div></div><div class="est-body">${cards}</div></div>`;
+  }).join('');
+}
+
+function ticketCard(t){
   const sla=getSLA(t);
-  const uc=t.urg==='Alta'?'alta':t.urg==='Media'?'media':'baja';
-  const isOld = mesActStart && t.ts<mesActStart && t.estado!=='Cerrado';
-  const extra=t.pin?' pinned':sla.status==='over'?' vencido':sla.status==='warn'?' riesgo':isOld?' mes-anterior':'';
-  const noEvidencia=t.estado==='Esperando Material'&&!t.fotoMaterial;
-  const slaBar=t.estado!=='Cerrado'?`<div class="sla-row s-${sla.status}"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${sla.status==='over'?'🔴 Vencido':sla.waiting?'⏸ Esp. material':'⏱ '+sla.label}</span></div>`:'';
-  const tags=`${urgBadge(t.urg)}${estBadge(t.estado)}${t.tec?`<span class="badge b-gray"><i class="ti ti-user" style="font-size:11px"></i> ${shortName(t.tec)}</span>`:'<span class="badge b-red"><i class="ti ti-user-off" style="font-size:11px"></i> Sin asignar</span>'}${isOld?'<span class="badge b-orange">Mes anterior</span>':''}${noEvidencia?'<span class="badge b-red">!! Sin evidencia material</span>':''}`;
-  return`<div class="tc tc-${uc}${extra}" onclick="openTicket('${t._key||t.id}')">
-    <div class="tc-top"><span class="tc-folio">${t.pin?'⭐ ':''}${t.id}</span><span class="tc-time">${elapsed(t.ts)}</span></div>
-    <div style="font-size:12px;font-weight:700;color:var(--g600);margin-bottom:4px"><i class="ti ti-building-store" style="font-size:11px;margin-right:3px"></i>${t.est}</div>
+  const venc=isVencido(t);
+  const cls=venc?'tc-vencido':t.estado==='En Proceso'?'tc-proceso':t.estado==='Cerrado'?'tc-cerrado':'tc-abierto';
+  const slaBar=t.estado!=='Cerrado'?`<div class="sla-row s-${sla.status}"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${venc?'🔴 Vencido':'⏱ '+sla.label}</span></div>`:'';
+  const atendidoBadge=t.atendidoPor?`<span class="badge b-gray"><i class="ti ti-tool" style="font-size:10px"></i> ${shortName(t.atendidoPor)}</span>`:'';
+  return`<div class="tc ${cls}" onclick="openTicket('${t._key||t.id}')">
+    <div class="tc-top"><span class="tc-folio">${t.id}</span><span class="tc-time">${elapsed(t.ts)}</span></div>
     <div class="tc-tipo">${t.cat}</div><div class="tc-sub">${t.sub}</div>
     <div class="tc-desc">${t.desc}</div>
-    <div class="tc-meta">${tags}</div>${slaBar}
+    <div class="tc-meta">${urgBadge(t.urg)}${estadoBadge(t.estado)}${atendidoBadge}</div>${slaBar}
   </div>`;
 }
 
-function filterT(f,el){ tFilter=f; document.querySelectorAll('#t-filters .fc').forEach(b=>b.classList.remove('on')); if(el)el.classList.add('on'); renderTickets(); }
+// ── FILTER PANEL ──────────────────────────────────────────
+function openFilterPanel(){
+  // Sync pending to active
+  pendingFilters={...activeFilters};
+  document.querySelectorAll('.fchip').forEach(b=>{
+    const oc=b.getAttribute('onclick')||'';
+    const m=oc.match(/setFChip\(this,'(\w+)','([^']+)'\)/);
+    if(m){const [,grp,val]=m; b.classList.toggle('on',pendingFilters[grp]===val);}
+  });
+  document.getElementById('filter-panel').classList.add('on');
+}
+
+function closeFilterPanel(){ document.getElementById('filter-panel').classList.remove('on'); }
+
+function setFChip(el,group,val){
+  pendingFilters[group]=val;
+  document.querySelectorAll(`.fchip`).forEach(b=>{
+    const oc=b.getAttribute('onclick')||'';
+    if(oc.includes(`'${group}'`)) b.classList.remove('on');
+  });
+  el.classList.add('on');
+}
+
+function applyFilters(){
+  activeFilters={...pendingFilters};
+  closeFilterPanel();
+  renderTickets();
+}
+
+function resetFilters(){
+  pendingFilters={...pendingFilters,urg:'todas',est:'todas',edad:'todas'};
+  document.querySelectorAll('.fchip').forEach(b=>{
+    const oc=b.getAttribute('onclick')||'';
+    const m=oc.match(/setFChip\(this,'(\w+)','([^']+)'\)/);
+    if(m){const [,grp,val]=m; b.classList.toggle('on',pendingFilters[grp]===val);}
+  });
+}
 
 // ── TICKET DETAIL ─────────────────────────────────────────
 function openTicket(key){
   const t=window._tickets.find(x=>(x._key||x.id)===key); if(!t)return;
   const sla=getSLA(t);
+  const venc=isVencido(t);
   const canManage=isMgr();
-  const isTec=window._CR==='tec';
-  const myName=TEC_MAP[window._CU]||'';
-  const isMine=myName&&t.tec===myName;
+  const isMtto=window._CR==='tec';
+  const canAct=canManage||isMtto;
+
   const tC=t.tsC&&t.ts?fmtHrs(t.tsC-t.ts):'En curso: '+fmtHrs(Date.now()-t.ts);
-  const tA=t.tsC&&t.tsA?fmtHrs(t.tsC-t.tsA):t.tsA?'En curso: '+fmtHrs(Date.now()-t.tsA):'Sin asignar';
+  const tI=t.tsI?fmtHrs(Date.now()-t.tsI):'—';
 
-  let assignBlock='';
-  if(canManage&&t.estado!=='Cerrado'){
-    assignBlock=`<div class="sdiv">Gestión del ticket</div>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <select id="asel" style="flex:1"><option value="">— Asignar técnico —</option>${getAllTecnicos().map(tc=>`<option ${t.tec===tc?'selected':''}>${tc}</option>`).join('')}</select>
-      <button class="bs bs-red" onclick="assignTec('${key}')"><i class="ti ti-check"></i>Asignar</button>
-    </div>
-    <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;color:var(--g600);cursor:pointer">
-      <input type="checkbox" id="asel-plan" style="width:16px;height:16px;accent-color:var(--blue)">
-      Agregar al plan de hoy del técnico
-    </label>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-      <button class="bs ${t.pin?'bs-purple':'bs-out'}" onclick="togglePin('${key}')" style="flex:1"><i class="ti ti-star"></i>${t.pin?'Quitar prioridad':'⭐ Prioridad'}</button>
-      <button class="bs bs-amber" onclick="setWaiting('${key}')" style="flex:1"><i class="ti ti-package"></i>${t.estado==='Esperando Material'?'Reanudar':'Esp. material'}</button>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="bs bs-blue" onclick="addToPlan('${key}')" style="flex:1"><i class="ti ti-calendar-check"></i>Agregar al plan del día</button>
-    </div>`;
-  }
+  const steps=[
+    {label:'Reportado',ts:t.ts,done:true},
+    {label:'En proceso',ts:t.tsI,done:!!t.tsI},
+    {label:'Cerrado',ts:t.tsC,done:!!t.tsC}
+  ];
+  const timeline='<div class="tl">'+steps.map(s=>`<div class="tl-item"><div class="tl-dot ${s.done?'tl-done':'tl-pend'}"></div><div class="tl-txt"><strong>${s.label}</strong>${s.ts?fmtDate(s.ts):''}</div></div>`).join('')+'</div>';
 
-  // Evidencia material
-  const noEv = t.estado==='Esperando Material'&&!t.fotoMaterial;
-  const matBlock=`<div style="margin-top:8px">
-    <p style="font-size:12px;font-weight:700;color:var(--g600);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Evidencia de material solicitado ${noEv?'<span style="color:var(--red)">!! Sin evidencia</span>':''}</p>
-    ${t.fotoMaterial?`<img src="${t.fotoMaterial}" style="width:100%;border-radius:var(--rs);max-height:160px;object-fit:cover" alt="">`:''}
-    ${canManage&&t.estado==='Esperando Material'?`<div class="photo-area ${t.fotoMaterial?'has-photo':''}" style="margin-top:6px" onclick="document.getElementById('pi-mat').click()"><i class="ti ti-camera"></i><span>${t.fotoMaterial?'Foto cargada ✓':'Subir evidencia (OC, correo, foto)'}</span></div><input type="file" id="pi-mat" accept="image/*" capture="environment" style="display:none" onchange="uploadMatPhoto('${key}')">`:''}</div>`;
-
-  let closeBlock='';
-  const canClose = canManage || (isTec && isMine);
-  if(canClose && t.estado!=='Cerrado' && t.estado!=='Abierto'){
-    closeBlock=`<div class="sdiv" style="margin-top:4px">Cerrar ticket</div>
+  // Actions
+  let actionBlock='';
+  if(canAct&&t.estado!=='Cerrado'){
+    if(t.estado==='Abierto'){
+      actionBlock=`<div class="sdiv">Acciones</div>
+      <div class="fg"><label>¿Por qué no se ha podido cerrar aún? <span>*</span></label><textarea id="act-motivo" placeholder="Describe la situación actual..."></textarea></div>
+      <div style="display:flex;gap:8px">
+        <button class="bs bs-amber" style="flex:1" onclick="marcarEnProceso('${key}')"><i class="ti ti-player-play"></i>Marcar en proceso</button>
+      </div>`;
+    }
+    // Close block for both mgr and mtto
+    actionBlock+=`<div class="sdiv" style="margin-top:8px">Cerrar ticket</div>
     <div class="fg"><label>Acción realizada <span>*</span></label><textarea id="caccion" placeholder="Describe qué se hizo...">${t.accion||''}</textarea></div>
+    <div class="fg"><label>¿Quién atendió? <span>*</span></label>
+      <select id="quien-atendio">
+        <option value="">— Selecciona —</option>
+        ${getTecnicos().map(n=>`<option value="${n}" ${t.atendidoPor===n?'selected':''}>${n}</option>`).join('')}
+      </select>
+    </div>
     <div class="fg">
       <label>Foto de evidencia <span>*</span></label>
       <div class="photo-area ${t.fotoCierre?'has-photo':''}" id="pa-close" onclick="document.getElementById('pi-close').click()"><i class="ti ti-camera"></i><span>${t.fotoCierre?'Foto cargada ✓':'Foto del trabajo realizado'}</span></div>
@@ -1203,27 +1068,18 @@ function openTicket(key){
     <button class="btn-main" onclick="closeTicket('${key}')"><i class="ti ti-circle-check"></i>Cerrar ticket</button>`;
   }
 
-  let tecBlock='';
-  if(isTec&&isMine&&t.estado==='Asignado'){
-    tecBlock=`<div class="sdiv" style="margin-top:4px">Acciones</div>
-    <p style="font-size:12px;color:var(--g500);margin-bottom:8px">Si vas a tardar en resolverlo, márcalo en proceso. Si ya lo resolviste, cierra directo abajo.</p>
-    <button class="bs bs-amber" style="width:100%;margin-bottom:4px" onclick="startTicket('${key}')"><i class="ti ti-player-play"></i>Marcar en proceso</button>`;
-  }
-
-  const steps=[{label:'Reportado',ts:t.ts,done:true},{label:t.tec?`Asignado a ${shortName(t.tec)}`:'Sin asignar',ts:t.tsA,done:!!t.tsA},{label:'Técnico en sitio',ts:t.tsI,done:!!t.tsI},{label:'Cerrado',ts:t.tsC,done:!!t.tsC}];
-  const timeline='<div class="tl">'+steps.map(s=>`<div class="tl-item"><div class="tl-dot ${s.done?'tl-done':'tl-pend'}"></div><div class="tl-txt"><strong>${s.label}</strong>${s.ts?fmtDate(s.ts):''}</div></div>`).join('')+'</div>';
-
+  // Chat
   const msgs=t.chat?Object.values(t.chat).sort((a,b)=>a.ts-b.ts):[];
-  const chatHtml=`<div class="sdiv">Comentarios y seguimiento</div>
-    <div class="chat-wrap">
-      <div class="chat-msgs" id="chat-msgs">${msgs.length?msgs.map(m=>{const isMe=m.author===(UNAMES[window._CU]||window._CU);return`<div class="chat-msg ${isMe?'chat-msg-out':'chat-msg-in'}"><div class="chat-msg-author">${m.author}</div>${m.text?`<div>${m.text}</div>`:''}${m.img?`<img src="${m.img}" class="chat-msg-img" alt="">`:''}<div class="chat-msg-time">${fmtDate(m.ts)}</div></div>`;}).join(''):'<p style="font-size:12px;color:var(--g400);text-align:center;padding:12px">Sin comentarios aún</p>'}</div>
-      <div class="chat-input-row">
-        <textarea class="chat-input" id="chat-input" placeholder="Escribe un comentario..." rows="1"></textarea>
-        <button class="chat-img-btn" onclick="document.getElementById('pi-chat').click()"><i class="ti ti-paperclip"></i></button>
-        <input type="file" id="pi-chat" accept="image/*" capture="environment" style="display:none" onchange="sendChatImg('${key}')">
-        <button class="chat-send-btn" onclick="sendChat('${key}')"><i class="ti ti-send"></i></button>
-      </div>
-    </div>`;
+  const chatHtml=`<div class="sdiv">Comentarios</div>
+  <div class="chat-wrap">
+    <div class="chat-msgs" id="chat-msgs">${msgs.length?msgs.map(m=>{const isMe=m.author===(UNAMES[window._CU]||window._CU);return`<div class="chat-msg ${isMe?'chat-msg-out':'chat-msg-in'}"><div class="chat-msg-author">${m.author}</div>${m.text?`<div>${m.text}</div>`:''}${m.img?`<img src="${m.img}" class="chat-msg-img" alt="">`:''}<div class="chat-msg-time">${fmtDate(m.ts)}</div></div>`;}).join(''):'<p style="font-size:12px;color:var(--g400);text-align:center;padding:12px">Sin comentarios</p>'}</div>
+    <div class="chat-input-row">
+      <textarea class="chat-input" id="chat-input" placeholder="Escribe un comentario..." rows="1"></textarea>
+      <button class="chat-img-btn" onclick="document.getElementById('pi-chat').click()"><i class="ti ti-paperclip"></i></button>
+      <input type="file" id="pi-chat" accept="image/*" capture="environment" style="display:none" onchange="sendChatImg('${key}')">
+      <button class="chat-send-btn" onclick="sendChat('${key}')"><i class="ti ti-send"></i></button>
+    </div>
+  </div>`;
 
   const fotoFalla=t.fotoFalla?`<img src="${t.fotoFalla}" style="width:100%;border-radius:var(--rs);max-height:180px;object-fit:cover;margin-top:8px" alt="">`:'' ;
   const fotoCierre=t.fotoCierre&&t.estado==='Cerrado'?`<div style="margin-top:8px"><p style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:4px">Foto de cierre</p><img src="${t.fotoCierre}" style="width:100%;border-radius:var(--rs);max-height:180px;object-fit:cover" alt=""></div>`:'';
@@ -1231,76 +1087,48 @@ function openTicket(key){
   document.getElementById('m-detail-body').innerHTML=`
     <button class="back-btn" onclick="closeModal('m-detail')"><i class="ti ti-arrow-left"></i>Regresar</button>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
-      <div><p style="font-size:11px;font-weight:800;color:var(--red);letter-spacing:.05em">${t.id}${t.pin?' ⭐':''}</p><p style="font-size:17px;font-weight:800;color:var(--g900)">${t.cat}</p><p style="font-size:13px;color:var(--g500);margin-top:2px">${t.sub}</p></div>
+      <div><p style="font-size:11px;font-weight:800;color:var(--red);letter-spacing:.05em">${t.id}</p><p style="font-size:17px;font-weight:800">${t.cat}</p><p style="font-size:13px;color:var(--g500);margin-top:2px">${t.sub}</p></div>
       <div style="text-align:right">${urgBadge(t.urg)}<br><span style="font-size:11px;color:var(--g400);margin-top:4px;display:block">${t.est}</span></div>
     </div>
-    <div class="times-row">
-      <div class="time-box"><div class="time-box-lbl">Desde creación</div><div class="time-box-val">${tC}</div></div>
-      <div class="time-box"><div class="time-box-lbl">Desde asignación</div><div class="time-box-val">${tA}</div></div>
+    <div style="display:flex;gap:8px;margin:10px 0">
+      <div style="flex:1;background:var(--g50);border:1px solid var(--g200);border-radius:var(--rs);padding:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Tiempo total</div><div style="font-size:15px;font-weight:800">${tC}</div></div>
+      <div style="flex:1;background:var(--g50);border:1px solid var(--g200);border-radius:var(--rs);padding:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">En proceso</div><div style="font-size:15px;font-weight:800">${tI}</div></div>
     </div>
+    ${venc&&t.estado!=='Cerrado'?`<div style="background:var(--red-light);border-radius:var(--rs);padding:8px 12px;font-size:12px;color:var(--red-dark);font-weight:700;margin-bottom:10px">🔴 SLA vencido — ${sla.label}</div>`:''}
     <div class="dr"><div class="di"><i class="ti ti-align-left"></i></div><div><div class="dl">Descripción</div><div class="dv">${t.desc}</div>${fotoFalla}</div></div>
     <div class="dr"><div class="di"><i class="ti ti-user"></i></div><div><div class="dl">Reportado por</div><div class="dv">${t.rep}</div></div></div>
     <div class="dr"><div class="di"><i class="ti ti-calendar"></i></div><div><div class="dl">Fecha de reporte</div><div class="dv">${fmtDate(t.ts)}</div></div></div>
-    ${t.tec?`<div class="dr"><div class="di"><i class="ti ti-tool"></i></div><div><div class="dl">Técnico asignado</div><div class="dv">${t.tec}</div></div></div>`:''}
+    ${t.motivoProceso?`<div class="dr"><div class="di"><i class="ti ti-info-circle"></i></div><div><div class="dl">Motivo en proceso</div><div class="dv">${t.motivoProceso}</div></div></div>`:''}
+    ${t.atendidoPor?`<div class="dr"><div class="di"><i class="ti ti-tool"></i></div><div><div class="dl">Atendido por</div><div class="dv">${t.atendidoPor}</div></div></div>`:''}
     ${t.accion?`<div class="dr"><div class="di"><i class="ti ti-circle-check"></i></div><div><div class="dl">Acción realizada</div><div class="dv">${t.accion}</div></div></div>`:''}
     ${fotoCierre}
-    ${t.estado==='Esperando Material'?matBlock:''}
-    ${t.estado!=='Cerrado'?`<div class="sla-row s-${sla.status}" style="margin-top:10px"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${sla.status==='over'?'🔴 SLA vencido':'SLA: '+sla.label+' restante'}</span></div>`:''}
-    <div class="sdiv">Estado — ${estBadge(t.estado)}</div>${timeline}
-    ${assignBlock}${tecBlock}${closeBlock}${chatHtml}`;
+    <div class="sdiv">Estado — ${estadoBadge(t.estado)}</div>${timeline}
+    ${actionBlock}${chatHtml}`;
   openModal('m-detail');
-  setTimeout(()=>{ const cm=document.getElementById('chat-msgs');if(cm)cm.scrollTop=cm.scrollHeight; },100);
+  setTimeout(()=>{const cm=document.getElementById('chat-msgs');if(cm)cm.scrollTop=cm.scrollHeight;},100);
+}
+
+function getTecnicos(){
+  if(!window._usuarios) return['Mantenimiento Correctivo'];
+  return Object.entries(window._usuarios).filter(([k,u])=>(u.rol==='tec')&&u.activo!==false).map(([k,u])=>u.nombre);
 }
 
 // ── ACCIONES ──────────────────────────────────────────────
-function assignTec(key){
-  const sel=document.getElementById('asel'); if(!sel?.value){showToast('Selecciona un técnico');return;}
-  const addPlan=document.getElementById('asel-plan')?.checked||false;
-  const hoy=todayStart();
-  const updates={tec:sel.value,tsA:Date.now(),estado:'Asignado'};
-  if(addPlan){ updates.planDia=true; updates.planDiaFecha=hoy; updates.planForzado=true; updates.planForzadoTs=Date.now(); updates.planForzadoPor=UNAMES[window._CU]||window._CU; updates.planVisto=false; }
-  fbUpd(key,updates);
-  if(addPlan){
-    const t=window._tickets.find(x=>(x._key||x.id)===key);
-    if(t){ const tConTec={...t,...updates}; logPlanEntry(tConTec,hoy); }
-  }
-  closeModal('m-detail');
-  showToast(addPlan?'Asignado a '+shortName(sel.value)+' y agregado al plan de hoy':'Asignado a '+shortName(sel.value));
-}
-
-function togglePin(key){
-  const t=window._tickets.find(x=>(x._key||x.id)===key); if(!t)return;
-  fbUpd(key,{pin:!t.pin}); closeModal('m-detail');
-  showToast(t.pin?'Prioridad removida':'⭐ Marcado como prioridad');
-}
-
-function setWaiting(key){
-  const t=window._tickets.find(x=>(x._key||x.id)===key); if(!t)return;
-  const isWait=t.estado==='Esperando Material';
-  fbUpd(key,{estado:isWait?'En Proceso':'Esperando Material',tsWait:isWait?null:Date.now()});
-  closeModal('m-detail'); showToast(isWait?'Ticket reanudado':'⏸ SLA pausado — esperando material');
-}
-
-function addToPlan(key){
-  const t=window._tickets.find(x=>(x._key||x.id)===key); if(!t||!t.tec)return;
-  fbUpd(key,{planDia:true,planDiaFecha:todayStart(),planForzado:true,planForzadoTs:Date.now(),planForzadoPor:UNAMES[window._CU]||window._CU,planVisto:false});
-  logPlanEntry(t,todayStart());
-  closeModal('m-detail'); showToast('✅ Agregado al plan del día de '+shortName(t.tec));
-}
-
-function uploadMatPhoto(key){
-  const input=document.getElementById('pi-mat'); if(!input?.files?.[0])return;
-  const r=new FileReader();
-  r.onload=e=>{ fbUpd(key,{fotoMaterial:e.target.result}); showToast('Evidencia de material guardada'); };
-  r.readAsDataURL(input.files[0]);
+function marcarEnProceso(key){
+  const motivo=document.getElementById('act-motivo')?.value.trim();
+  if(!motivo){showToast('Describe la situación actual');return;}
+  fbUpd(key,{estado:'En Proceso',tsI:Date.now(),motivoProceso:motivo});
+  closeModal('m-detail'); showToast('Marcado en proceso');
 }
 
 function closeTicket(key){
   const accion=document.getElementById('caccion')?.value.trim();
+  const quien=document.getElementById('quien-atendio')?.value;
   if(!accion){showToast('Describe la acción realizada');return;}
+  if(!quien){showToast('Selecciona quién atendió');return;}
   const t=window._tickets.find(x=>(x._key||x.id)===key);
   if(!t?.fotoCierre){showToast('Agrega foto de evidencia');return;}
-  fbUpd(key,{accion,estado:'Cerrado',tsC:Date.now(),pin:false,planDia:false});
+  fbUpd(key,{accion,atendidoPor:quien,estado:'Cerrado',tsC:Date.now()});
   closeModal('m-detail'); showToast('✅ Ticket cerrado');
 }
 
@@ -1316,141 +1144,6 @@ function prevClosePhoto(key){
   r.readAsDataURL(input.files[0]);
 }
 
-function startTicket(key){
-  fbUpd(key,{estado:'En Proceso',tsI:Date.now()}); closeModal('m-detail'); showToast('Marcado en proceso');
-}
-
-// ── PLAN DEL DÍA ──────────────────────────────────────────
-function renderPlan(){
-  const myName=TEC_MAP[window._CU]||'';
-  const hoy=todayStart();
-  const todos=window._tickets.filter(t=>t.tec===myName&&t.estado!=='Cerrado');
-
-  const planHoy=todos.filter(t=>t.planDia&&(t.planDiaFecha||0)>=hoy);
-
-  // Notificaciones de forzados no vistos
-  const nuevos=planHoy.filter(t=>t.planForzado&&t.planForzadoTs&&t.planForzadoTs>=hoy&&!t.planVisto);
-  const notifEl=document.getElementById('plan-notif');
-  if(nuevos.length>0){
-    notifEl.innerHTML=nuevos.map(t=>`<div class="notif-banner" onclick="markPlanVisto('${t._key||t.id}')"><i class="ti ti-bell-ringing" style="font-size:20px;flex-shrink:0"></i><div><strong>${t.planForzadoPor||'Gerencia'}</strong> agregó <strong>${t.id}</strong> a tu plan de hoy<br><span style="font-size:11px;opacity:.8">${t.est} · ${t.cat}</span></div></div>`).join('');
-  } else notifEl.innerHTML='';
-
-  // Plan de hoy
-  const planEl=document.getElementById('plan-hoy-list');
-  if(planHoy.length===0){
-    planEl.innerHTML='<div class="empty" style="padding:24px"><i class="ti ti-clipboard-list"></i><p>Sin tickets en tu plan de hoy.<br>Ve a "Mis tickets" para agregar trabajo a tu plan.</p></div>';
-  } else {
-    planEl.innerHTML=`<div class="plan-header"><i class="ti ti-clipboard-check"></i><div class="plan-header-txt"><div class="plan-header-title">Plan de trabajo de hoy</div><div class="plan-header-sub">${new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'})}</div></div><div class="plan-count">${planHoy.length}</div></div>`+sortTickets([...planHoy]).map(t=>{
-      const sla=getSLA(t); const uc=t.urg==='Alta'?'alta':t.urg==='Media'?'media':'baja';
-      return`<div class="tc tc-${uc} plan-hoy" onclick="openTicket('${t._key||t.id}')">
-        <div class="tc-top"><span class="tc-folio">${t.id}</span><span class="tc-time">${elapsed(t.ts)} · ${t.est}</span></div>
-        <div class="tc-tipo">${t.cat}</div><div class="tc-sub">${t.sub}</div>
-        <div class="tc-meta">${urgBadge(t.urg)}${estBadge(t.estado)}${t.planForzado?`<span class="badge b-purple"><i class="ti ti-star" style="font-size:10px"></i> Forzado</span>`:''}</div>
-        <div class="sla-row s-${sla.status}"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${sla.status==='over'?'🔴 Vencido':'⏱ '+sla.label}</span></div>
-        <button class="bs bs-out" style="width:100%;margin-top:8px;font-size:12px" onclick="event.stopPropagation();removeFromPlan('${t._key||t.id}')"><i class="ti ti-minus"></i>Quitar del plan de hoy</button>
-      </div>`;
-    }).join('');
-  }
-}
-
-function addTicketToPlan(key){
-  fbUpd(key,{planDia:true,planDiaFecha:todayStart()});
-  const t=window._tickets.find(x=>(x._key||x.id)===key);
-  logPlanEntry(t,todayStart());
-  showToast('✅ Agregado a tu plan de hoy');
-}
-function removeFromPlan(key){ fbUpd(key,{planDia:false}); showToast('Removido del plan de hoy'); }
-function markPlanVisto(key){ fbUpd(key,{planVisto:true}); }
-
-// ── MIS TICKETS ───────────────────────────────────────────
-let misFilter = 'todos';
-function filterMis(f,el){ misFilter=f; document.querySelectorAll('#mis-filters .fc').forEach(b=>b.classList.remove('on')); if(el)el.classList.add('on'); renderMis(); }
-
-function renderMis(){
-  const myName=TEC_MAP[window._CU]||'';
-  let mine=[...window._tickets].filter(t=>t.tec===myName);
-  if(misFilter==='vencido') mine=mine.filter(t=>t.estado!=='Cerrado'&&getSLA(t).status==='over');
-  else if(misFilter!=='todos') mine=mine.filter(t=>t.estado===misFilter);
-  sortTickets(mine);
-  const c=document.getElementById('mis-list'); if(!c)return;
-  c.innerHTML=mine.length?mine.map(t=>misTicketCard(t)).join(''):'<div class="empty"><i class="ti ti-circle-check"></i><p>No tienes tickets en esta categoría</p></div>';
-}
-
-function misTicketCard(t){
-  const sla=getSLA(t);
-  const uc=t.urg==='Alta'?'alta':t.urg==='Media'?'media':'baja';
-  const hoy=todayStart();
-  const enPlan = t.planDia && (t.planDiaFecha||0)>=hoy;
-  const extra=t.pin?' pinned':sla.status==='over'&&t.estado!=='Cerrado'?' vencido':sla.status==='warn'&&t.estado!=='Cerrado'?' riesgo':'';
-  const slaBar=t.estado!=='Cerrado'?`<div class="sla-row s-${sla.status}"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${sla.status==='over'?'🔴 Vencido':sla.waiting?'⏸ Esp. material':'⏱ '+sla.label}</span></div>`:'';
-  const tags=`${urgBadge(t.urg)}${estBadge(t.estado)}${enPlan?'<span class="badge b-blue"><i class="ti ti-calendar-check" style="font-size:10px"></i> En plan de hoy</span>':''}`;
-  let planBtn='';
-  if(t.estado!=='Cerrado'){
-    planBtn = enPlan
-      ? `<button class="bs bs-out" style="width:100%;margin-top:8px;font-size:12px" onclick="event.stopPropagation();removeFromPlan('${t._key||t.id}')"><i class="ti ti-minus"></i>Quitar del plan de hoy</button>`
-      : `<button class="bs bs-blue" style="width:100%;margin-top:8px;font-size:12px" onclick="event.stopPropagation();addTicketToPlan('${t._key||t.id}')"><i class="ti ti-plus"></i>Agregar a mi plan de hoy</button>`;
-  }
-  return`<div class="tc tc-${uc}${extra}" onclick="openTicket('${t._key||t.id}')">
-    <div class="tc-top"><span class="tc-folio">${t.pin?'⭐ ':''}${t.id}</span><span class="tc-time">${elapsed(t.ts)} · ${t.est}</span></div>
-    <div class="tc-tipo">${t.cat}</div><div class="tc-sub">${t.sub}</div>
-    <div class="tc-desc">${t.desc}</div>
-    <div class="tc-meta">${tags}</div>${slaBar}${planBtn}
-  </div>`;
-}
-
-// ── MI DASHBOARD ──────────────────────────────────────────
-function setMiPeriod(p,el){
-  miDashPeriod=p;
-  document.querySelectorAll('#v-mi-dash .period-row .period-btn').forEach(b=>b.classList.remove('on'));
-  if(el) el.classList.add('on');
-  renderMiDash();
-}
-
-function renderMiDash(){
-  const myName=TEC_MAP[window._CU]||'';
-  const [pStart,pEnd]=getPeriodRange(miDashPeriod);
-  const hoy=todayStart();
-  const mis=window._tickets.filter(t=>t.tec===myName&&t.ts>=pStart&&t.ts<=pEnd);
-  const total=mis.length||1;
-  const cerr=mis.filter(t=>t.estado==='Cerrado').length;
-  const abiertos=mis.filter(t=>t.estado!=='Cerrado').length;
-  const planHoy=window._tickets.filter(t=>t.tec===myName&&t.planDia&&(t.planDiaFecha||0)>=hoy&&t.estado!=='Cerrado').length;
-  const venc=mis.filter(t=>t.estado!=='Cerrado'&&getSLA(t).status==='over').length;
-  const cerrados=mis.filter(t=>t.estado==='Cerrado'&&t.tsC&&t.ts);
-  const aTiempo=cerrados.filter(t=>{const max=(SLA_HRS[t.urg]||24)*3600000;return(t.tsC-t.ts)<=max;}).length;
-  const pctSLA=cerrados.length>0?Math.round(aTiempo/cerrados.length*100):0;
-
-  document.getElementById('mi-dash-sub').textContent=UNAMES[window._CU]||'';
-  document.getElementById('mi-kpi-grid').innerHTML=`
-    <div class="kpi kpi-green"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${cerr}</div><div class="kpi-pct" style="color:var(--green)">${pct(cerr,total)}%</div><div class="kpi-sub">del período</div></div>
-    <div class="kpi kpi-amber"><div class="kpi-lbl">Pendientes</div><div class="kpi-val">${abiertos}</div><div class="kpi-pct" style="color:var(--amber)">${pct(abiertos,total)}%</div><div class="kpi-sub">sin cerrar</div></div>
-    <div class="kpi kpi-blue"><div class="kpi-lbl">Plan de hoy</div><div class="kpi-val">${planHoy}</div><div class="kpi-pct" style="color:var(--blue)">hoy</div><div class="kpi-sub">en mi plan</div></div>
-    <div class="kpi kpi-red"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${venc}</div><div class="kpi-pct" style="color:var(--red)">${pct(venc,total)}%</div><div class="kpi-sub">superaron SLA</div></div>
-    <div class="kpi kpi-green"><div class="kpi-lbl">% Cumpl. SLA</div><div class="kpi-val">${pctSLA}%</div><div class="kpi-pct" style="color:var(--green)">${aTiempo}/${cerrados.length}</div><div class="kpi-sub">a tiempo</div></div>`;
-
-  const avgC=cerrados.length?fmtHrs(cerrados.reduce((s,t)=>s+(t.tsC-t.ts),0)/cerrados.length):'—';
-  const cAsig=cerrados.filter(t=>t.tsA);
-  const avgA=cAsig.length?fmtHrs(cAsig.reduce((s,t)=>s+(t.tsC-t.tsA),0)/cAsig.length):'—';
-  document.getElementById('mi-avgs').innerHTML=`
-    <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Prom. desde creación</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgC}</div></div>
-    <div style="flex:1;padding:10px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Prom. desde asignación</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgA}</div></div>`;
-
-  const tipos={};mis.forEach(t=>{tipos[t.cat]=(tipos[t.cat]||0)+1;});
-  const mx=Math.max(...Object.values(tipos),1);
-  document.getElementById('mi-bar-tipos').innerHTML=Object.entries(tipos).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([tipo,cnt])=>`<div class="br"><span class="bl">${tipo}</span><div class="bt"><div class="bf" style="width:${Math.round(cnt/mx*100)}%"></div></div><span class="bn">${cnt}</span></div>`).join('');
-}
-
-// ── VISTA ESTACIÓN ────────────────────────────────────────
-function renderEst(){
-  const en=EST_MAP[window._CU]||'';
-  const mine=sortTickets([...window._tickets].filter(t=>t.est===en));
-  const pend=mine.filter(t=>t.estado!=='Cerrado').length;
-  const el=document.getElementById('est-title'); if(el)el.textContent=`${en} — ${pend} pendiente${pend!==1?'s':''}`;
-  const c=document.getElementById('est-list'); if(!c)return;
-  const header=pend?`<div class="card" style="margin-bottom:10px;background:var(--blue-l);border-color:var(--blue-l)"><p style="font-size:12px;color:var(--blue-d);font-weight:600"><i class="ti ti-clock" style="margin-right:4px"></i>${pend} ticket${pend!==1?'s activos':'activo'} en cola</p></div>`:'';
-  c.innerHTML=header+(mine.length?mine.map(t=>ticketCard(t)).join(''):'<div class="empty"><i class="ti ti-circle-check"></i><p>Sin tickets para esta estación</p></div>');
-}
-
 // ── SUBMIT / CREATE TICKET ────────────────────────────────
 function submitTicket(){
   const est=document.getElementById('r-est').value;
@@ -1463,13 +1156,13 @@ function submitTicket(){
   const prev=document.getElementById('pp-rep');
   const fotoFalla=prev?.src&&prev.classList.contains('on')?prev.src:'';
   const id=genId();
-  const ticket={id,est,cat:cat.name,sub:sub.name,desc,urg:sub.urg||'Media',estado:'Abierto',rep:nombre,ts:Date.now(),tsA:null,tsI:null,tsC:null,tec:'',accion:'',pin:false,tsWait:null,fotoFalla,fotoCierre:'',planDia:false};
-  if(window._db){ const nr=window._push(window._ref(window._db,'tickets')); window._set(nr,ticket); }
+  const ticket={id,est,cat:cat.name,sub:sub.name,desc,urg:sub.urg||'Media',estado:'Abierto',rep:nombre,ts:Date.now(),tsI:null,tsC:null,accion:'',fotoFalla,fotoCierre:'',atendidoPor:''};
+  if(window._db){const nr=window._push(window._ref(window._db,'tickets'));window._set(nr,ticket);}
   ['r-est','r-cat','r-sub'].forEach(id=>{const s=document.getElementById(id);if(s)s.value='';});
   ['r-desc','r-nombre'].forEach(id=>{const s=document.getElementById(id);if(s)s.value='';});
   document.getElementById('r-hint-wrap').style.display='none';
-  const pa=document.getElementById('pa-rep'); if(pa){pa.classList.remove('has-photo');pa.querySelector('span').textContent='Tomar foto o seleccionar';}
-  const pp=document.getElementById('pp-rep'); if(pp)pp.classList.remove('on');
+  const pa=document.getElementById('pa-rep');if(pa){pa.classList.remove('has-photo');pa.querySelector('span').textContent='Tomar foto o seleccionar';}
+  const pp=document.getElementById('pp-rep');if(pp)pp.classList.remove('on');
   showToast('✅ Ticket '+id+' enviado');
 }
 
@@ -1482,8 +1175,8 @@ function createTicket(){
   if(!est||!catId||!subId||!desc){showToast('Completa los campos obligatorios');return;}
   const cat=getCat(catId); const sub=cat?.subs.find(s=>s.id===subId);
   const id=genId();
-  const ticket={id,est,cat:cat.name,sub:sub.name,desc,urg:sub.urg||'Media',estado:'Abierto',rep,ts:Date.now(),tsA:null,tsI:null,tsC:null,tec:'',accion:'',pin:false,tsWait:null,fotoFalla:'',fotoCierre:'',planDia:false};
-  if(window._db){ const nr=window._push(window._ref(window._db,'tickets')); window._set(nr,ticket); }
+  const ticket={id,est,cat:cat.name,sub:sub.name,desc,urg:sub.urg||'Media',estado:'Abierto',rep,ts:Date.now(),tsI:null,tsC:null,accion:'',fotoFalla:'',fotoCierre:'',atendidoPor:''};
+  if(window._db){const nr=window._push(window._ref(window._db,'tickets'));window._set(nr,ticket);}
   ['n-est','n-cat','n-sub'].forEach(id=>{const s=document.getElementById(id);if(s)s.value='';});
   ['n-desc','n-rep'].forEach(id=>{const s=document.getElementById(id);if(s)s.value='';});
   document.getElementById('n-sub').innerHTML='<option value="">— Primero elige categoría —</option>';
@@ -1493,7 +1186,7 @@ function createTicket(){
 // ── FOTO ──────────────────────────────────────────────────
 function prevPhoto(src){
   const input=document.getElementById('pi-'+src); const prev=document.getElementById('pp-'+src); const btn=document.getElementById('pa-'+src);
-  if(input?.files?.[0]){ const r=new FileReader(); r.onload=e=>{if(prev){prev.src=e.target.result;prev.classList.add('on');}if(btn){btn.classList.add('has-photo');btn.querySelector('span').textContent='Foto seleccionada ✓';}};r.readAsDataURL(input.files[0]); }
+  if(input?.files?.[0]){const r=new FileReader();r.onload=e=>{if(prev){prev.src=e.target.result;prev.classList.add('on');}if(btn){btn.classList.add('has-photo');btn.querySelector('span').textContent='Foto seleccionada ✓';}};r.readAsDataURL(input.files[0]);}
 }
 
 // ── CHAT ──────────────────────────────────────────────────
@@ -1504,11 +1197,10 @@ function sendChat(key){
   window._set(msgRef,{text,author:UNAMES[window._CU]||window._CU,ts:Date.now()});
   input.value='';
 }
-
 function sendChatImg(key){
   const input=document.getElementById('pi-chat'); if(!input?.files?.[0])return;
   const r=new FileReader();
-  r.onload=e=>{ if(!window._db)return; const msgRef=window._push(window._ref(window._db,`tickets/${key}/chat`)); window._set(msgRef,{img:e.target.result,author:UNAMES[window._CU]||window._CU,ts:Date.now()}); };
+  r.onload=e=>{if(!window._db)return;const msgRef=window._push(window._ref(window._db,`tickets/${key}/chat`));window._set(msgRef,{img:e.target.result,author:UNAMES[window._CU]||window._CU,ts:Date.now()});};
   r.readAsDataURL(input.files[0]);
 }
 
@@ -1536,205 +1228,78 @@ function renderCfg(){
       </div>
     </div>`).join('');
 }
-
-function toggleCfgCat(id){ const el=document.getElementById(id); if(el)el.style.display=el.style.display==='none'?'block':'none'; }
-function toggleCatActive(catId){ const c=(window._cats||[]).find(x=>x.id===catId);if(!c)return; c.active=!c.active; fbSet('cats',window._cats); renderCfg();populateSelects(); showToast(c.active?'Activada':'Desactivada'); }
-function toggleSubActive(catId,subId){ const c=(window._cats||[]).find(x=>x.id===catId);const s=c?.subs.find(x=>x.id===subId);if(!s)return; s.active=!s.active; fbSet('cats',window._cats); renderCfg();populateSelects(); showToast(s.active?'Activada':'Desactivada'); }
-function deleteSub(catId,subId){ const c=(window._cats||[]).find(x=>x.id===catId);if(!c)return; c.subs=c.subs.filter(s=>s.id!==subId); fbSet('cats',window._cats); renderCfg();populateSelects(); showToast('Eliminada'); }
-function openAddCat(){ document.getElementById('nc-name').value=''; openModal('m-addcat'); }
-function saveNewCat(){ const name=document.getElementById('nc-name').value.trim();if(!name){showToast('Escribe un nombre');return;} (window._cats||[]).push({id:'c'+Date.now(),name,active:true,subs:[]}); fbSet('cats',window._cats); closeModal('m-addcat');renderCfg();populateSelects(); showToast('Categoría "'+name+'" creada'); }
-function openAddSub(catId,catName){ addSubCatId=catId;nsUrgSel=''; document.getElementById('ns-name').value=''; document.getElementById('addsub-catname').textContent=catName; ['alta','media','baja'].forEach(u=>{const b=document.getElementById('nsu-'+u);if(b)b.className='ub';}); openModal('m-addsub'); }
-function setNsUrg(u){ nsUrgSel=u; ['alta','media','baja'].forEach(x=>{const b=document.getElementById('nsu-'+x);if(b)b.className='ub';}); const sel=document.getElementById('nsu-'+u.toLowerCase());if(sel)sel.className='ub sel-'+u.toLowerCase(); }
-function saveNewSub(){ const name=document.getElementById('ns-name').value.trim();if(!name){showToast('Escribe un nombre');return;} if(!nsUrgSel){showToast('Selecciona la urgencia');return;} const c=(window._cats||[]).find(x=>x.id===addSubCatId);if(!c)return; c.subs.push({id:'s'+Date.now(),name,urg:nsUrgSel,active:true}); fbSet('cats',window._cats); closeModal('m-addsub');renderCfg();populateSelects(); showToast('Subcategoría "'+name+'" agregada'); }
+function toggleCfgCat(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none';}
+function toggleCatActive(catId){const c=(window._cats||[]).find(x=>x.id===catId);if(!c)return;c.active=!c.active;fbSet('cats',window._cats);renderCfg();populateSelects();showToast(c.active?'Activada':'Desactivada');}
+function toggleSubActive(catId,subId){const c=(window._cats||[]).find(x=>x.id===catId);const s=c?.subs.find(x=>x.id===subId);if(!s)return;s.active=!s.active;fbSet('cats',window._cats);renderCfg();populateSelects();showToast(s.active?'Activada':'Desactivada');}
+function deleteSub(catId,subId){const c=(window._cats||[]).find(x=>x.id===catId);if(!c)return;c.subs=c.subs.filter(s=>s.id!==subId);fbSet('cats',window._cats);renderCfg();populateSelects();showToast('Eliminada');}
+function openAddCat(){document.getElementById('nc-name').value='';openModal('m-addcat');}
+function saveNewCat(){const name=document.getElementById('nc-name').value.trim();if(!name){showToast('Escribe un nombre');return;}(window._cats||[]).push({id:'c'+Date.now(),name,active:true,subs:[]});fbSet('cats',window._cats);closeModal('m-addcat');renderCfg();populateSelects();showToast('Categoría "'+name+'" creada');}
+function openAddSub(catId,catName){addSubCatId=catId;nsUrgSel='';document.getElementById('ns-name').value='';document.getElementById('addsub-catname').textContent=catName;['alta','media','baja'].forEach(u=>{const b=document.getElementById('nsu-'+u);if(b)b.className='ub';});openModal('m-addsub');}
+function setNsUrg(u){nsUrgSel=u;['alta','media','baja'].forEach(x=>{const b=document.getElementById('nsu-'+x);if(b)b.className='ub';});const sel=document.getElementById('nsu-'+u.toLowerCase());if(sel)sel.className='ub sel-'+u.toLowerCase();}
+function saveNewSub(){const name=document.getElementById('ns-name').value.trim();if(!name){showToast('Escribe un nombre');return;}if(!nsUrgSel){showToast('Selecciona la urgencia');return;}const c=(window._cats||[]).find(x=>x.id===addSubCatId);if(!c)return;c.subs.push({id:'s'+Date.now(),name,urg:nsUrgSel,active:true});fbSet('cats',window._cats);closeModal('m-addsub');renderCfg();populateSelects();showToast('Subcategoría "'+name+'" agregada');}
 
 // ── USUARIOS ──────────────────────────────────────────────
-let passUserKey='';
 const ROL_LABELS={director:'Dirección',jefe:'Mantenimiento',tec:'Mantenimiento',sup:'Supervisores',est:'Estaciones'};
-const ROL_ORDER=['director','jefe','tec','sup','est'];
-
 function renderUsuarios(){
-  const c=document.getElementById('usuarios-list'); if(!c)return;
+  const c=document.getElementById('usuarios-list');if(!c)return;
   const u=window._usuarios||{};
   const groups={};
   Object.entries(u).forEach(([key,info])=>{
+    if(key.startsWith('est-'))return; // skip legacy
     const lbl=ROL_LABELS[info.rol]||'Otros';
-    if(!groups[lbl]) groups[lbl]=[];
+    if(!groups[lbl])groups[lbl]=[];
     groups[lbl].push({key,...info});
   });
   const labelOrder=['Dirección','Mantenimiento','Supervisores','Estaciones'];
   c.innerHTML=labelOrder.filter(l=>groups[l]).map(label=>{
     const rows=groups[label].map(item=>{
-      const isTec = item.rol==='tec';
-      const inactivo = item.activo===false;
-      const nameStyle = inactivo ? 'text-decoration:line-through;color:var(--g400)' : '';
-      const toggleBtn = isTec
-        ? `<button class="bs ${inactivo?'bs-green':'bs-out'}" style="padding:6px 10px;font-size:12px" onclick="toggleTecActivo('${item.key}')"><i class="ti ${inactivo?'ti-rotate':'ti-user-off'}"></i>${inactivo?'Reactivar':'Dar de baja'}</button>`
-        : '';
-      return `<div class="cfg-sub-row">
-        <span class="cfg-sub-name" style="${nameStyle}">${item.nombre}${inactivo?' <span class="badge b-gray">Inactivo</span>':''}</span>
+      const isTec=item.rol==='tec';
+      const inactivo=item.activo===false;
+      const toggleBtn=isTec?`<button class="bs ${inactivo?'bs-green':'bs-out'}" style="padding:5px 8px;font-size:11px" onclick="toggleTecActivo('${item.key}')"><i class="ti ${inactivo?'ti-rotate':'ti-user-off'}"></i>${inactivo?'Activar':'Baja'}</button>`:'';
+      return`<div class="cfg-sub-row">
+        <span class="cfg-sub-name ${inactivo?'usr-inactive':''}">${item.nombre}${inactivo?' <span class="badge b-gray">Inactivo</span>':''}</span>
         ${toggleBtn}
-        <button class="bs bs-out" style="padding:6px 10px;font-size:12px" onclick="openPassModal('${item.key}','${item.nombre.replace(/'/g,"\\'")}')"><i class="ti ti-key"></i>Contraseña</button>
+        <button class="bs bs-out" style="padding:5px 8px;font-size:11px" onclick="openPassModal('${item.key}','${item.nombre.replace(/'/g,"\\'")}')"><i class="ti ti-key"></i></button>
       </div>`;
     }).join('');
-    return `<div class="cfg-cat"><div class="cfg-cat-hdr" style="cursor:default"><span class="cfg-cat-name">${label}</span></div><div class="cfg-subs" style="display:block">${rows}</div></div>`;
+    return`<div class="cfg-cat"><div class="cfg-cat-hdr" style="cursor:default"><span class="cfg-cat-name">${label}</span></div><div class="cfg-subs" style="display:block">${rows}</div></div>`;
   }).join('');
 }
-
+function openPassModal(key,nombre){passUserKey=key;document.getElementById('pass-username').textContent=nombre;document.getElementById('pass-new').value='';document.getElementById('pass-confirm').value='';document.getElementById('pass-err').style.display='none';openModal('m-pass');}
+function savePass(){
+  const p1=document.getElementById('pass-new').value;const p2=document.getElementById('pass-confirm').value;
+  const errEl=document.getElementById('pass-err');
+  if(!p1||p1.length<4){errEl.textContent='Mínimo 4 caracteres.';errEl.style.display='block';return;}
+  if(p1!==p2){errEl.textContent='Las contraseñas no coinciden.';errEl.style.display='block';return;}
+  if(!window._usuarios||!window._usuarios[passUserKey])return;
+  window._usuarios[passUserKey].pass=p1;fbSet('usuarios',window._usuarios);closeModal('m-pass');showToast('✅ Contraseña actualizada');
+}
 function saveNewTec(){
-  const nombre=document.getElementById('nt-nombre').value.trim();
-  if(!nombre){ showToast('Escribe el nombre del técnico'); return; }
-  if(!window._usuarios) return;
+  const nombre=document.getElementById('nt-nombre').value.trim();if(!nombre){showToast('Escribe el nombre');return;}
+  if(!window._usuarios)return;
   const key='tec-'+Date.now();
   window._usuarios[key]={nombre,rol:'tec',pass:'12345',activo:true};
-  fbSet('usuarios',window._usuarios);
-  UNAMES[key]=nombre;
-  document.getElementById('nt-nombre').value='';
-  closeModal('m-addtec');
-  renderUsuarios();
-  showToast('✅ Técnico "'+nombre+'" agregado con contraseña inicial 12345');
+  fbSet('usuarios',window._usuarios);UNAMES[key]=nombre;
+  document.getElementById('nt-nombre').value='';closeModal('m-addtec');renderUsuarios();showToast('✅ Técnico "'+nombre+'" agregado');
 }
-
 function toggleTecActivo(key){
-  if(!window._usuarios||!window._usuarios[key]) return;
-  const actual = window._usuarios[key].activo!==false;
-  window._usuarios[key].activo = !actual;
-  fbSet('usuarios',window._usuarios);
-  renderUsuarios();
-  showToast(actual?'Técnico dado de baja':'Técnico reactivado');
-}
-
-// ── PLANES (vista gerencial de planes diarios por técnico) ────
-let planesDate = todayStart();
-let planesTecFilter = 'todos';
-let planesEstFilter = 'todos';
-let planesStatusFilter = 'todos';
-let planesHistorial = {};
-let planesUnsub = null;
-
-function planesShiftDay(delta){
-  const d = new Date(planesDate);
-  d.setDate(d.getDate()+delta);
-  planesDate = d.getTime();
-  loadPlanHistorial();
-}
-
-function planesGoToday(){ planesDate = todayStart(); loadPlanHistorial(); }
-
-function loadPlanHistorial(){
-  if(!window._db||!window._onValue){ renderPlanes(); return; }
-  const path = `planHistorial/${planesDate}`;
-  window._onValue(window._ref(window._db,path),(snap)=>{
-    planesHistorial = snap.exists() ? snap.val() : {};
-    renderPlanes();
-  });
-}
-
-function setPlanesTec(t,el){ planesTecFilter=t; document.querySelectorAll('#planes-tec-filters .fc').forEach(b=>b.classList.remove('on')); if(el)el.classList.add('on'); renderPlanes(); }
-function setPlanesTecByIndex(i,el){ const name=(window._planesTecList||[])[i]; setPlanesTec(name,el); }
-function setPlanesEst(e,el){ planesEstFilter=e; document.querySelectorAll('#planes-est-filters .fc').forEach(b=>b.classList.remove('on')); if(el)el.classList.add('on'); renderPlanes(); }
-function setPlanesEstByIndex(i,el){ setPlanesEst(ESTACIONES[i],el); }
-function setPlanesStatus(s,el){ planesStatusFilter=s; document.querySelectorAll('#planes-status-filters .fc').forEach(b=>b.classList.remove('on')); if(el)el.classList.add('on'); renderPlanes(); }
-
-function renderPlanes(){
-  const sub=document.getElementById('planes-date-sub'); if(!sub)return;
-  const isToday = planesDate===todayStart();
-  sub.textContent = new Date(planesDate).toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'}) + (isToday?' (hoy)':'');
-  const todayBtn=document.getElementById('planes-today-btn'); if(todayBtn) todayBtn.classList.toggle('on',isToday);
-
-  // Filtros de técnico (dinámicos)
-  const tecFiltersEl=document.getElementById('planes-tec-filters');
-  if(tecFiltersEl && !tecFiltersEl.dataset.built){
-    const tecs=getAllTecnicos();
-    window._planesTecList = tecs;
-    tecFiltersEl.innerHTML='<button class="fc on" onclick="setPlanesTec(\'todos\',this)">Todos los técnicos</button>'+tecs.map((t,i)=>'<button class="fc" onclick="setPlanesTecByIndex('+i+',this)">'+shortName(t)+'</button>').join('');
-    tecFiltersEl.dataset.built='1';
-  }
-  // Filtros de estación (dinámicos)
-  const estFiltersEl=document.getElementById('planes-est-filters');
-  if(estFiltersEl && !estFiltersEl.dataset.built){
-    estFiltersEl.innerHTML='<button class="fc on" onclick="setPlanesEst(\'todos\',this)">Todas las estaciones</button>'+ESTACIONES.map((e,i)=>'<button class="fc" onclick="setPlanesEstByIndex('+i+',this)">'+e+'</button>').join('');
-    estFiltersEl.dataset.built='1';
-  }
-
-  // Construir lista de entradas desde la bitácora del día, cruzando con datos vivos del ticket cuando exista
-  let entries = Object.values(planesHistorial||{}).map(h=>{
-    const live = window._tickets.find(t=>(t._key||t.id)===h.ticketKey);
-    return {
-      ticketKey: h.ticketKey, id: h.ticketId, tec: h.tec,
-      est: live?.est||h.est, cat: live?.cat||h.cat, sub: live?.sub||h.sub, urg: live?.urg||h.urg,
-      estado: live?live.estado:'Cerrado', // si el ticket ya no existe en _tickets, asumimos cerrado/archivado
-      ts: live?.ts||h.ts, pin: live?.pin||false, _live: live
-    };
-  });
-
-  if(planesTecFilter!=='todos') entries=entries.filter(e=>e.tec===planesTecFilter);
-  if(planesEstFilter!=='todos') entries=entries.filter(e=>e.est===planesEstFilter);
-  if(planesStatusFilter==='vencido') entries=entries.filter(e=>e._live&&e.estado!=='Cerrado'&&getSLA(e._live).status==='over');
-  else if(planesStatusFilter==='prioridad') entries=entries.filter(e=>e.pin);
-  else if(planesStatusFilter!=='todos') entries=entries.filter(e=>e.estado===planesStatusFilter);
-
-  const c=document.getElementById('planes-list'); if(!c)return;
-  if(entries.length===0){
-    c.innerHTML='<div class="empty"><i class="ti ti-calendar-off"></i><p>Sin tickets planeados para esta fecha con estos filtros.</p></div>';
-    return;
-  }
-
-  // Agrupar por técnico
-  const porTec={};
-  entries.forEach(e=>{ if(!porTec[e.tec]) porTec[e.tec]=[]; porTec[e.tec].push(e); });
-  const tecsOrdenados=Object.keys(porTec).sort();
-
-  c.innerHTML = tecsOrdenados.map(tec=>{
-    const items=porTec[tec];
-    const cards=items.map(e=>{
-      const uc=e.urg==='Alta'?'alta':e.urg==='Media'?'media':'baja';
-      const sla = e._live ? getSLA(e._live) : null;
-      const slaBar = e._live && e.estado!=='Cerrado' ? `<div class="sla-row s-${sla.status}"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${sla.status==='over'?'🔴 Vencido':'⏱ '+sla.label}</span></div>` : '';
-      return `<div class="tc tc-${uc}" onclick="openTicket('${e.ticketKey}')">
-        <div class="tc-top"><span class="tc-folio">${e.pin?'⭐ ':''}${e.id}</span><span class="tc-time">${e.est}</span></div>
-        <div class="tc-tipo">${e.cat}</div><div class="tc-sub">${e.sub}</div>
-        <div class="tc-meta">${urgBadge(e.urg)}${estBadge(e.estado)}</div>${slaBar}
-      </div>`;
-    }).join('');
-    return `<div class="card"><div class="card-title"><i class="ti ti-user"></i>${shortName(tec)} <span style="margin-left:auto;font-weight:700;color:var(--g400)">${items.length}</span></div>${cards}</div>`;
-  }).join('');
-}
-
-function openPassModal(key,nombre){
-  passUserKey=key;
-  document.getElementById('pass-username').textContent=nombre;
-  document.getElementById('pass-new').value='';
-  document.getElementById('pass-confirm').value='';
-  document.getElementById('pass-err').style.display='none';
-  openModal('m-pass');
-}
-
-function savePass(){
-  const p1=document.getElementById('pass-new').value;
-  const p2=document.getElementById('pass-confirm').value;
-  const errEl=document.getElementById('pass-err');
-  if(!p1||p1.length<4){ errEl.textContent='La contraseña debe tener al menos 4 caracteres.'; errEl.style.display='block'; return; }
-  if(p1!==p2){ errEl.textContent='Las contraseñas no coinciden.'; errEl.style.display='block'; return; }
-  if(!window._usuarios||!window._usuarios[passUserKey]) return;
-  window._usuarios[passUserKey].pass=p1;
-  fbSet('usuarios',window._usuarios);
-  closeModal('m-pass');
-  showToast('✅ Contraseña actualizada');
+  if(!window._usuarios||!window._usuarios[key])return;
+  const actual=window._usuarios[key].activo!==false;
+  window._usuarios[key].activo=!actual;fbSet('usuarios',window._usuarios);renderUsuarios();showToast(actual?'Dado de baja':'Reactivado');
 }
 
 // ── MODAL / TOAST ─────────────────────────────────────────
-function openModal(id){ document.getElementById(id).classList.add('on'); }
-function closeModal(id){ document.getElementById(id).classList.remove('on'); }
-function showToast(msg){ const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2500); }
+function openModal(id){document.getElementById(id).classList.add('on');}
+function closeModal(id){document.getElementById(id).classList.remove('on');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2500);}
 
 // ── AUTO RESUME ───────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{
-  window._authBooted = true;
+  window._authBooted=true;
   function showLogin(){
-    // Respaldo: si Firebase no entregó usuarios, usar los predeterminados
     if(!window._usuarios||Object.keys(window._usuarios).length===0){
-      window._usuarios = JSON.parse(JSON.stringify(window._DEFAULT_USUARIOS));
-      Object.keys(window._usuarios).forEach(k=>{ UNAMES[k]=window._usuarios[k].nombre; });
+      window._usuarios=JSON.parse(JSON.stringify(window._DEFAULT_USUARIOS));
+      Object.keys(window._usuarios).forEach(k=>{UNAMES[k]=window._usuarios[k].nombre;});
     }
     populateLoginSelect();
     document.getElementById('loading-screen').style.display='none';
@@ -1742,16 +1307,15 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
   try{
     const s=sessionStorage.getItem('fg_u');
-    // Timeout de seguridad: si en 8 segundos Firebase no responde, mostrar login con datos por defecto
-    const timeout=setTimeout(()=>{ showLogin(); }, 8000);
+    const timeout=setTimeout(()=>showLogin(),8000);
     const check=setInterval(()=>{
-      if(window._fbReady&&window._usuariosReady){ clearInterval(check); clearTimeout(timeout);
+      if(window._fbReady&&window._usuariosReady){clearInterval(check);clearTimeout(timeout);
         populateLoginSelect();
-        if(s&&UNAMES[s]){ window._CU=s; window._CR=getRole(s); document.getElementById('au').value=s; startApp(); }
-        else{ document.getElementById('loading-screen').style.display='none'; document.getElementById('auth').style.display='flex'; }
+        if(s&&UNAMES[s]){window._CU=s;window._CR=getRole(s);document.getElementById('au').value=s;startApp();}
+        else showLogin();
       }
     },100);
-  }catch(e){ document.getElementById('loading-screen').style.display='none'; document.getElementById('auth').style.display='flex'; }
+  }catch(e){document.getElementById('loading-screen').style.display='none';document.getElementById('auth').style.display='flex';}
 });
 </script>
 </body>
