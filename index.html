@@ -800,7 +800,12 @@ function sortTickets(list){
 
 // ── AUTH ──────────────────────────────────────────────────
 function populateLoginSelect(){
-  const sel=document.getElementById('au'); if(!sel||!window._usuarios)return;
+  const sel=document.getElementById('au'); if(!sel)return;
+  // Respaldo: si no hay usuarios cargados, usar los predeterminados
+  if(!window._usuarios||Object.keys(window._usuarios).length===0){
+    window._usuarios=JSON.parse(JSON.stringify(window._DEFAULT_USUARIOS));
+    Object.keys(window._usuarios).forEach(k=>{ UNAMES[k]=window._usuarios[k].nombre; });
+  }
   const prevVal=sel.value;
   const groups={director:{label:'Dirección',items:[]},jefe:{label:'Mantenimiento',items:[]},tec:{label:'Mantenimiento',items:[]},sup:{label:'Supervisores',items:[]},est:{label:'Estaciones',items:[]}};
   let encargadoAdded=false;
@@ -1725,10 +1730,22 @@ function showToast(msg){ const t=document.getElementById('toast');t.textContent=
 // ── AUTO RESUME ───────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{
   window._authBooted = true;
+  function showLogin(){
+    // Respaldo: si Firebase no entregó usuarios, usar los predeterminados
+    if(!window._usuarios||Object.keys(window._usuarios).length===0){
+      window._usuarios = JSON.parse(JSON.stringify(window._DEFAULT_USUARIOS));
+      Object.keys(window._usuarios).forEach(k=>{ UNAMES[k]=window._usuarios[k].nombre; });
+    }
+    populateLoginSelect();
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('auth').style.display='flex';
+  }
   try{
     const s=sessionStorage.getItem('fg_u');
+    // Timeout de seguridad: si en 8 segundos Firebase no responde, mostrar login con datos por defecto
+    const timeout=setTimeout(()=>{ showLogin(); }, 8000);
     const check=setInterval(()=>{
-      if(window._fbReady&&window._usuariosReady){ clearInterval(check);
+      if(window._fbReady&&window._usuariosReady){ clearInterval(check); clearTimeout(timeout);
         populateLoginSelect();
         if(s&&UNAMES[s]){ window._CU=s; window._CR=getRole(s); document.getElementById('au').value=s; startApp(); }
         else{ document.getElementById('loading-screen').style.display='none'; document.getElementById('auth').style.display='flex'; }
