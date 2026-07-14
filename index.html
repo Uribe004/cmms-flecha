@@ -932,7 +932,7 @@ function hasActiveFilters(){
 
 function renderTickets(){
   let base=[...window._tickets];
-  if(window._CR==='sup'){const z=SUP_ZONES[window._CU]||[];base=base.filter(t=>z.includes(t.est));}
+  if(window._CR==='sup'&&window._CU!=='supervision'){const zones={'sup-dayanara':['San Carlos','San Germán','MG','Loma Linda','Miramar'],'sup-juanmanuel':['Petrolera','Arcaza','Corsario','Estadio','Batuecas'],'sup-edgar':['Valiente']};const z=zones[window._CU]||[];if(z.length)base=base.filter(t=>z.includes(t.est));}
   let list=applyFiltersToList(base);
 
   // Update filter button appearance
