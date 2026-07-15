@@ -814,6 +814,8 @@ function sortTickets(list){
 }
 
 function _refreshCurrentView(){
+  // No refrescar si hay un modal abierto — evita el bug de "conectando" al editar
+  if(document.querySelector('.overlay.on')) return;
   const v=document.querySelector('.view.on'); if(!v)return;
   const vid=v.id;
   if(vid==='v-dash') renderDash();
@@ -1034,16 +1036,18 @@ function renderDash(){
   // Tiempos promedio
   const cerrados=inP.filter(t=>t.estado==='Cerrado'&&t.tsC&&t.ts);
   const avgC=cerrados.length?fmtHrs(cerrados.reduce((s,t)=>s+(t.tsC-t.ts),0)/cerrados.length):'—';
-  const cConR=cerrados.filter(t=>t.tsI);
-  const avgR=cConR.length?fmtHrs(cConR.reduce((s,t)=>s+(t.tsC-t.tsI),0)/cConR.length):'—';
   const isDir=window._CR==='director';
-  const ticketsConTs=inP.filter(t=>t.tsI&&t.ts);
-  const avgResp=ticketsConTs.length?fmtHrs(ticketsConTs.reduce((s,t)=>s+(t.tsI-t.ts),0)/ticketsConTs.length):'—';
+
+  // Ticket más antiguo abierto
+  const abiertosAct=inP.filter(t=>t.estado!=='Cerrado').sort((a,b)=>a.ts-b.ts);
+  const masAntiguo=abiertosAct.length?fmtHrs(Date.now()-abiertosAct[0].ts):'—';
+  const masAntiguoId=abiertosAct.length?abiertosAct[0].id:'—';
+
   document.getElementById('dash-avgs').innerHTML=`
-    <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Tiempo resolución</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgC}</div></div>
-    <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Tiempo atención</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgR}</div></div>
-    <div style="flex:1;padding:10px;text-align:center${isDir?';border-right:1px solid var(--g200)':''}"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Total período</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${inP.length}</div></div>
-    ${isDir?`<div style="flex:1;padding:10px;text-align:center;background:var(--blue-l)"><div style="font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:3px">Prom. 1ra respuesta</div><div style="font-size:18px;font-weight:800;color:var(--blue)">${avgResp}</div></div>`:''}`;
+    <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Promedio de resolución</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgC}</div><div style="font-size:10px;color:var(--g400);margin-top:2px">${cerrados.length} ticket${cerrados.length!==1?'s':''} cerrado${cerrados.length!==1?'s':''}</div></div>
+    <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:3px">Ticket más antiguo</div><div style="font-size:18px;font-weight:800;color:var(--red)">${masAntiguo}</div><div style="font-size:10px;color:var(--g400);margin-top:2px">${masAntiguoId}</div></div>
+    <div style="flex:1;padding:10px;text-align:center${isDir?';border-right:1px solid var(--g200)':''}"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Total período</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${inP.length}</div><div style="font-size:10px;color:var(--g400);margin-top:2px">tickets este período</div></div>
+    ${isDir?`<div style="flex:1;padding:10px;text-align:center;background:var(--blue-l)"><div style="font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:3px">Efectividad global</div><div style="font-size:18px;font-weight:800;color:var(--blue)">${efectividad}%</div><div style="font-size:10px;color:var(--blue);margin-top:2px">${cerradosATiempo} a tiempo de ${totalPeriodo}</div></div>`:''}`;
 
   window._dashData={ab,pr,ce,ve,total:inP.length};
   if(donutOpen) renderDonut();
