@@ -949,7 +949,9 @@ function renderDash(){
 
   const cv=inP.filter(t=>t.cerradoVencido===true).length;
   const cerradosTotal=inP.filter(t=>t.estado==='Cerrado').length;
-  const pctSLA=cerradosTotal>0?Math.round((cerradosTotal-cv)/cerradosTotal*100):0;
+  const cerradosATiempo=cerradosTotal-cv;
+  const totalPeriodo=inP.length||1;
+  const efectividad=Math.round(cerradosATiempo/totalPeriodo*100);
 
   document.getElementById('kpi-grid').innerHTML=`
     <div class="kpi kpi-blue" onclick="goToTickets('Abierto')" style="cursor:pointer"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-sub">${pct(ab,total)}% del período</div></div>
@@ -958,7 +960,7 @@ function renderDash(){
     <div class="kpi kpi-red" onclick="goToTickets('vencido')" style="cursor:pointer"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-sub">${pct(ve,total)}% del total</div></div>`;
 
   document.getElementById('kpi-grid2').innerHTML=`
-    <div class="kpi kpi-green"><div class="kpi-lbl">% Cumplimiento SLA</div><div class="kpi-val">${pctSLA}%</div><div class="kpi-sub">${cerradosTotal-cv}/${cerradosTotal} a tiempo</div></div>
+    <div class="kpi kpi-green"><div class="kpi-lbl">Efectividad</div><div class="kpi-val">${efectividad}%</div><div class="kpi-sub">${cerradosATiempo} cerrados a tiempo de ${totalPeriodo} totales</div></div>
     <div class="kpi kpi-red"><div class="kpi-lbl">Cerrados fuera de tiempo</div><div class="kpi-val">${cv}</div><div class="kpi-sub">${cerradosTotal>0?pct(cv,cerradosTotal):0}% de los cerrados</div></div>`;
 
   // Tiempos promedio
