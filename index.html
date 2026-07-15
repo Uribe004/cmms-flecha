@@ -59,7 +59,7 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--red);box
 .view.on{display:block}
 
 /* KPI */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
 .kpi{background:var(--white);border:1px solid var(--g200);border-radius:var(--r);padding:12px 14px;position:relative;overflow:hidden;cursor:pointer}
 .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
 .kpi-red::before{background:var(--red)}
@@ -80,7 +80,7 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--red);box
 .period-btn.on{background:var(--red);border-color:var(--red);color:var(--white)}
 
 /* CARD */
-.card{background:var(--white);border:1px solid var(--g200);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.card{background:var(--white);border:1px solid var(--g200);border-radius:var(--r);padding:14px;margin-bottom:16px}
 .card-title{font-size:13px;font-weight:700;color:var(--g700);margin-bottom:12px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.04em}
 .card-title i{font-size:16px;color:var(--red)}
 
@@ -385,6 +385,15 @@ textarea{resize:none;min-height:80px}
         <div><div class="sh-title">Configuración</div><div class="sh-sub">Categorías y subcategorías</div></div>
         <button class="bs bs-red" onclick="openAddCat()"><i class="ti ti-plus"></i>Categoría</button>
       </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title"><i class="ti ti-clock-hour-4"></i>Tiempos de respuesta (horas)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+          <div><label style="font-size:11px;font-weight:700;color:var(--red-dark);display:block;margin-bottom:4px">🔴 Alta</label><input type="number" id="sla-alta" min="1" style="text-align:center"></div>
+          <div><label style="font-size:11px;font-weight:700;color:var(--amber-d);display:block;margin-bottom:4px">🟡 Media</label><input type="number" id="sla-media" min="1" style="text-align:center"></div>
+          <div><label style="font-size:11px;font-weight:700;color:var(--green-d);display:block;margin-bottom:4px">🟢 Baja</label><input type="number" id="sla-baja" min="1" style="text-align:center"></div>
+        </div>
+        <button class="bs bs-red" style="width:100%" onclick="saveSLA()"><i class="ti ti-check"></i>Guardar tiempos</button>
+      </div>
       <div id="cfg-list"></div>
     </div>
 
@@ -521,9 +530,9 @@ textarea{resize:none;min-height:80px}
         <option value="Cerrado">Cerrado</option>
       </select>
     </div>
-    <div class="fg"><label>Fecha de creación (timestamp)</label><input type="text" id="e-ts" placeholder="ej. 1783454159160"></div>
-    <div class="fg"><label>Fecha en proceso (timestamp)</label><input type="text" id="e-tsi" placeholder="dejar vacío si no aplica"></div>
-    <div class="fg"><label>Fecha de cierre (timestamp)</label><input type="text" id="e-tsc" placeholder="dejar vacío si no aplica"></div>
+    <div class="fg"><label>Fecha de creación</label><input type="datetime-local" id="e-ts"></div>
+    <div class="fg"><label>Fecha en proceso</label><input type="datetime-local" id="e-tsi"></div>
+    <div class="fg"><label>Fecha de cierre</label><input type="datetime-local" id="e-tsc"></div>
     <div class="fg"><label>Atendido por</label><input type="text" id="e-atendido"></div>
     <div class="fg"><label>Acción realizada</label><textarea id="e-accion" placeholder="Descripción de lo que se hizo..."></textarea></div>
     <button class="btn-main" onclick="saveEditTicket()"><i class="ti ti-check"></i>Guardar cambios</button>
@@ -566,6 +575,18 @@ onValue(ref(db,'usuarios'),(snap)=>{
   if(window._authBooted) populateLoginSelect();
 },{onlyOnce:false});
 
+// SLA config
+onValue(ref(db,'sla'),(snap)=>{
+  if(snap.exists()){
+    const s=snap.val();
+    window._SLA=s;
+    // Update live SLA_HRS — will be picked up by getSLA on next call
+    if(s.Alta) window._slaAlta=s.Alta;
+    if(s.Media) window._slaMedia=s.Media;
+    if(s.Baja) window._slaBaja=s.Baja;
+  }
+},{onlyOnce:false});
+
 // Tickets — migrate legacy states on load
 onValue(ref(db,'tickets'),(snap)=>{
   if(snap.exists()){
@@ -595,7 +616,7 @@ window._DEFAULT_USUARIOS = {
 let UNAMES={director:'Francisco',jefe:'Santiago Meza',mtto:'Mantenimiento Correctivo','sup-dayanara':'Dayanara Castillo','sup-juanmanuel':'Juan Manuel Osuna','sup-edgar':'Edgar Navarro',encargado:'Encargado de estación'};
 const SUP_ZONES={'sup-dayanara':['San Carlos','San Germán','MG','Loma Linda','Miramar'],'sup-juanmanuel':['Petrolera','Arcaza','Corsario','Estadio','Batuecas'],'sup-edgar':['Valiente']};
 const ESTACIONES=['Estadio','Petrolera','San Germán','Valiente','Corsario','Loma Linda','MG','San Carlos','Batuecas','Arcaza','Miramar'];
-const SLA_HRS={Alta:6,Media:48,Baja:120};
+let SLA_HRS={Alta:6,Media:48,Baja:120};
 
 window._DEFAULT_CATS = [
   {id:'c1',name:'Dispensario',active:true,subs:[
@@ -649,6 +670,7 @@ let dashPeriod='mes';
 let activeFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
 let pendingFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
 let nsUrgSel=''; let addSubCatId=''; let passUserKey='';
+let estChartOpen=false;
 let fallasChartOpen=false;
 function toggleFallasChart(){
   fallasChartOpen=!fallasChartOpen;
@@ -692,7 +714,8 @@ function getPeriodRange(period){
 
 function getSLA(t){
   if(t.estado==='Cerrado') return{pct:100,status:'ok',label:'Cerrado'};
-  const max=(SLA_HRS[t.urg]||24)*3600000;
+  const hrs={Alta:window._slaAlta||SLA_HRS.Alta,Media:window._slaMedia||SLA_HRS.Media,Baja:window._slaBaja||SLA_HRS.Baja};
+  const max=(hrs[t.urg]||24)*3600000;
   const el=Date.now()-t.ts;
   const pct=Math.min(100,Math.round(el/max*100));
   const status=pct>=100?'over':pct>=75?'warn':'ok';
@@ -1266,7 +1289,20 @@ function sendChatImg(key){
 }
 
 // ── CONFIG ────────────────────────────────────────────────
+function saveSLA(){
+  const alta=parseInt(document.getElementById('sla-alta').value)||6;
+  const media=parseInt(document.getElementById('sla-media').value)||48;
+  const baja=parseInt(document.getElementById('sla-baja').value)||120;
+  window._slaAlta=alta; window._slaMedia=media; window._slaBaja=baja;
+  fbSet('sla',{Alta:alta,Media:media,Baja:baja});
+  showToast('✅ Tiempos de respuesta actualizados');
+}
+
 function renderCfg(){
+  // Populate SLA fields
+  document.getElementById('sla-alta').value=window._slaAlta||SLA_HRS.Alta;
+  document.getElementById('sla-media').value=window._slaMedia||SLA_HRS.Media;
+  document.getElementById('sla-baja').value=window._slaBaja||SLA_HRS.Baja;
   const canDel=window._CR==='director';
   document.getElementById('cfg-list').innerHTML=(window._cats||[]).map(cat=>`
     <div class="cfg-cat">
@@ -1351,28 +1387,27 @@ function toggleTecActivo(key){
 
 // ── EDIT TICKET (director only) ───────────────────────────
 let editKey='';
+function tsToLocal(ts){ if(!ts)return''; const d=new Date(ts); const pad=n=>String(n).padStart(2,'0'); return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function localToTs(str){ if(!str)return null; return new Date(str).getTime(); }
+
 function openEditTicket(key){
   const t=window._tickets.find(x=>(x._key||x.id)===key); if(!t)return;
   editKey=key;
-  // Populate estacion
   const eEst=document.getElementById('e-est');
   eEst.innerHTML=ESTACIONES.map(e=>`<option value="${e}" ${t.est===e?'selected':''}>${e}</option>`).join('');
-  // Populate categoria
   const eCat=document.getElementById('e-cat');
   const ac=(window._cats||[]).filter(c=>c.active);
   eCat.innerHTML=ac.map(c=>`<option value="${c.id}" ${t.cat===c.name?'selected':''}>${c.name}</option>`).join('');
-  // Populate subcategoria
   const catObj=ac.find(c=>c.name===t.cat);
   const eSub=document.getElementById('e-sub');
   if(catObj) eSub.innerHTML=catObj.subs.filter(s=>s.active).map(s=>`<option value="${s.id}" ${t.sub===s.name?'selected':''}>${s.name}</option>`).join('');
-  // Rest of fields
   document.getElementById('e-urg').value=t.urg||'Media';
   document.getElementById('e-desc').value=t.desc||'';
   document.getElementById('e-rep').value=t.rep||'';
   document.getElementById('e-estado').value=t.estado||'Abierto';
-  document.getElementById('e-ts').value=t.ts||'';
-  document.getElementById('e-tsi').value=t.tsI||'';
-  document.getElementById('e-tsc').value=t.tsC||'';
+  document.getElementById('e-ts').value=tsToLocal(t.ts);
+  document.getElementById('e-tsi').value=tsToLocal(t.tsI);
+  document.getElementById('e-tsc').value=tsToLocal(t.tsC);
   document.getElementById('e-atendido').value=t.atendidoPor||'';
   document.getElementById('e-accion').value=t.accion||'';
   openModal('m-edit');
@@ -1384,8 +1419,6 @@ function saveEditTicket(){
   const subId=document.getElementById('e-sub').value;
   const catObj=(window._cats||[]).find(c=>c.id===catId);
   const subObj=catObj?.subs.find(s=>s.id===subId);
-  const tsI=document.getElementById('e-tsi').value.trim();
-  const tsC=document.getElementById('e-tsc').value.trim();
   const updates={
     est:document.getElementById('e-est').value,
     cat:catObj?.name||'',
@@ -1394,9 +1427,9 @@ function saveEditTicket(){
     desc:document.getElementById('e-desc').value.trim(),
     rep:document.getElementById('e-rep').value.trim(),
     estado:document.getElementById('e-estado').value,
-    ts:parseInt(document.getElementById('e-ts').value)||Date.now(),
-    tsI:tsI?parseInt(tsI):null,
-    tsC:tsC?parseInt(tsC):null,
+    ts:localToTs(document.getElementById('e-ts').value)||Date.now(),
+    tsI:localToTs(document.getElementById('e-tsi').value),
+    tsC:localToTs(document.getElementById('e-tsc').value),
     atendidoPor:document.getElementById('e-atendido').value.trim(),
     accion:document.getElementById('e-accion').value.trim(),
   };
