@@ -280,7 +280,7 @@ textarea{resize:none;min-height:80px}
   <div class="auth-card">
     <p class="auth-title">Sistema de Mantenimiento</p>
     <p class="auth-sub">Selecciona tu perfil para continuar</p>
-    <div class="fl"><label>¿Quién eres?</label><select id="au"><option value="">— Selecciona —</option></select></div>
+    <div class="fl"><label>Usuario</label><select id="au"><option value="">— Selecciona —</option></select></div>
     <div class="fl" id="pass-wrap"><label>Contraseña</label><input type="password" id="au-pass" placeholder="Contraseña" autocomplete="current-password"></div>
     <p class="auth-err" id="aerr"></p>
     <button class="btn-main" onclick="doLogin()"><i class="ti ti-login"></i>Entrar</button>
@@ -322,6 +322,7 @@ textarea{resize:none;min-height:80px}
         <button class="period-btn" onclick="setPeriod('mes-ant',this)">Mes anterior</button>
       </div>
       <div class="kpi-row" id="kpi-grid"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px" id="kpi-grid2"></div>
       <div class="card">
         <div class="card-title"><i class="ti ti-clock-hour-4"></i>Tiempos promedio</div>
         <div style="display:flex;border:1px solid var(--g200);border-radius:var(--rs);overflow:hidden" id="dash-avgs"></div>
@@ -946,11 +947,19 @@ function renderDash(){
   const ce=inP.filter(t=>t.estado==='Cerrado').length;
   const ve=inP.filter(t=>isVencido(t)).length;
 
+  const cv=inP.filter(t=>t.cerradoVencido===true).length;
+  const cerradosTotal=inP.filter(t=>t.estado==='Cerrado').length;
+  const pctSLA=cerradosTotal>0?Math.round((cerradosTotal-cv)/cerradosTotal*100):0;
+
   document.getElementById('kpi-grid').innerHTML=`
     <div class="kpi kpi-blue" onclick="goToTickets('Abierto')" style="cursor:pointer"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-sub">${pct(ab,total)}% del período</div></div>
     <div class="kpi kpi-amber" onclick="goToTickets('En Proceso')" style="cursor:pointer"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-sub">${pct(pr,total)}% del período</div></div>
     <div class="kpi kpi-green" onclick="goToTickets('Cerrado')" style="cursor:pointer"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div><div class="kpi-sub">${pct(ce,total)}% del período</div></div>
     <div class="kpi kpi-red" onclick="goToTickets('vencido')" style="cursor:pointer"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-sub">${pct(ve,total)}% del total</div></div>`;
+
+  document.getElementById('kpi-grid2').innerHTML=`
+    <div class="kpi kpi-green"><div class="kpi-lbl">% Cumplimiento SLA</div><div class="kpi-val">${pctSLA}%</div><div class="kpi-sub">${cerradosTotal-cv}/${cerradosTotal} a tiempo</div></div>
+    <div class="kpi kpi-red"><div class="kpi-lbl">Cerrados fuera de tiempo</div><div class="kpi-val">${cv}</div><div class="kpi-sub">${cerradosTotal>0?pct(cv,cerradosTotal):0}% de los cerrados</div></div>`;
 
   // Tiempos promedio
   const cerrados=inP.filter(t=>t.estado==='Cerrado'&&t.tsC&&t.ts);
@@ -1058,11 +1067,12 @@ function ticketCard(t){
   const cls=venc?'tc-vencido':t.estado==='En Proceso'?'tc-proceso':t.estado==='Cerrado'?'tc-cerrado':'tc-abierto';
   const slaBar=t.estado!=='Cerrado'?`<div class="sla-row s-${sla.status}"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${venc?'🔴 Vencido':'⏱ '+sla.label}</span></div>`:'';
   const atendidoBadge=t.atendidoPor?`<span class="badge b-gray"><i class="ti ti-tool" style="font-size:10px"></i> ${shortName(t.atendidoPor)}</span>`:'';
+  const vencidoBadge=t.cerradoVencido?`<span class="badge b-red">⚠️ Cerrado fuera de tiempo</span>`:'';
   return`<div class="tc ${cls}" onclick="openTicket('${t._key||t.id}')">
     <div class="tc-top"><span class="tc-folio">${t.id}</span><span class="tc-time">${elapsed(t.ts)}</span></div>
     <div class="tc-tipo">${t.cat}</div><div class="tc-sub">${t.sub}</div>
     <div class="tc-desc">${t.desc}</div>
-    <div class="tc-meta">${urgBadge(t.urg)}${estadoBadge(t.estado)}${atendidoBadge}</div>${slaBar}
+    <div class="tc-meta">${urgBadge(t.urg)}${estadoBadge(t.estado)}${atendidoBadge}${vencidoBadge}</div>${slaBar}
   </div>`;
 }
 
@@ -1212,8 +1222,9 @@ function closeTicket(key){
   if(!quien){showToast('Selecciona quién atendió');return;}
   const t=window._tickets.find(x=>(x._key||x.id)===key);
   if(!t?.fotoCierre){showToast('Agrega foto de evidencia');return;}
-  fbUpd(key,{accion,atendidoPor:quien,estado:'Cerrado',tsC:Date.now()});
-  closeModal('m-detail'); showToast('✅ Ticket cerrado');
+  const vencido=isVencido(t);
+  fbUpd(key,{accion,atendidoPor:quien,estado:'Cerrado',tsC:Date.now(),cerradoVencido:vencido});
+  closeModal('m-detail'); showToast(vencido?'⚠️ Ticket cerrado fuera de tiempo':'✅ Ticket cerrado');
 }
 
 function prevClosePhoto(key){
