@@ -96,20 +96,26 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--red);box
 .pill-red{background:var(--red-light);color:var(--red-dark)}
 .est-body{padding:8px 10px}
 
-/* TICKET CARD */
-.tc{border-radius:var(--rs);padding:11px 12px;margin-bottom:6px;cursor:pointer;position:relative;overflow:hidden;border-left:4px solid transparent}
-.tc:last-child{margin-bottom:0}
-.tc-abierto{background:#EFF6FF;border-left-color:var(--blue)}
-.tc-proceso{background:#FFFBEB;border-left-color:var(--amber)}
-.tc-cerrado{background:var(--g50);border-left-color:var(--green);opacity:.8}
-.tc-vencido{background:var(--red-light);border-left-color:var(--red)}
-.tc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:3px}
-.tc-folio{font-size:11px;font-weight:800;color:var(--red);letter-spacing:.05em}
+/* TICKET CARD — new design */
+.tc{background:var(--white);border:0.5px solid var(--g200);border-radius:10px;padding:13px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:border-color .15s}
+.tc:hover{border-color:var(--g400)}
+.tc-ind{width:3px;border-radius:2px;flex-shrink:0;align-self:stretch;min-height:70px}
+.tc-body{flex:1;min-width:0}
+.tc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.tc-folio{font-size:10px;font-weight:800;letter-spacing:.06em}
 .tc-time{font-size:11px;color:var(--g400)}
-.tc-tipo{font-size:13px;font-weight:700;color:var(--g900)}
-.tc-sub{font-size:12px;color:var(--g600);margin-bottom:4px}
-.tc-desc{font-size:12px;color:var(--g500);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:6px}
-.tc-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.tc-cat{font-size:15px;font-weight:700;color:var(--g900);margin-bottom:2px}
+.tc-sub{font-size:13px;color:var(--g600);margin-bottom:6px}
+.tc-desc{font-size:13px;color:var(--g800);margin-bottom:8px;padding:6px 10px;background:var(--g50);border-radius:6px;border-left:2px solid var(--g300);line-height:1.4}
+.tc-bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px}
+
+/* KPI ARC */
+.kpi-arc{display:flex;justify-content:flex-end;margin-top:6px}
+
+/* DONUT PANEL */
+.donut-panel{border:0.5px solid var(--g200);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.donut-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--white)}
+.donut-body{display:none;padding:16px;border-top:0.5px solid var(--g100)}
 
 /* BADGES */
 .badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:12px;white-space:nowrap}
@@ -323,6 +329,24 @@ textarea{resize:none;min-height:80px}
       </div>
       <div class="kpi-row" id="kpi-grid"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px" id="kpi-grid2"></div>
+      <div class="donut-panel">
+        <div class="donut-header" onclick="toggleDonut()">
+          <span style="font-size:13px;font-weight:700;color:var(--g800)"><i class="ti ti-chart-pie" style="margin-right:6px;font-size:15px;color:var(--red)"></i>Vista general del período</span>
+          <i class="ti ti-chevron-down" id="donut-chevron" style="font-size:16px;color:var(--g400)"></i>
+        </div>
+        <div class="donut-body" id="donut-body">
+          <div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap">
+            <div style="position:relative;width:150px;height:150px;flex-shrink:0">
+              <canvas id="donut-chart" role="img" aria-label="Distribución de tickets por estado"></canvas>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+                <span style="font-size:28px;font-weight:800;color:var(--g900)" id="donut-total">—</span>
+                <span style="font-size:11px;color:var(--g400)">total</span>
+              </div>
+            </div>
+            <div style="flex:1;min-width:140px;display:flex;flex-direction:column;gap:8px" id="donut-legend"></div>
+          </div>
+        </div>
+      </div>
       <div class="card">
         <div class="card-title"><i class="ti ti-clock-hour-4"></i>Tiempos promedio</div>
         <div style="display:flex;border:1px solid var(--g200);border-radius:var(--rs);overflow:hidden" id="dash-avgs"></div>
@@ -541,6 +565,7 @@ textarea{resize:none;min-height:80px}
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
 <!-- FIREBASE -->
 <script type="module">
@@ -671,8 +696,42 @@ let dashPeriod='mes';
 let activeFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
 let pendingFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
 let nsUrgSel=''; let addSubCatId=''; let passUserKey='';
-let estChartOpen=false;
-let fallasChartOpen=false;
+let donutOpen=false;
+let donutChart=null;
+function toggleDonut(){
+  donutOpen=!donutOpen;
+  const body=document.getElementById('donut-body');
+  const ch=document.getElementById('donut-chevron');
+  if(body) body.style.display=donutOpen?'block':'none';
+  if(ch) ch.className='ti '+(donutOpen?'ti-chevron-up':'ti-chevron-down');
+  if(donutOpen) renderDonut();
+}
+function renderDonut(){
+  const d=window._dashData||{ab:0,pr:0,ce:0,ve:0,total:0};
+  const tot=d.total||1;
+  const el=document.getElementById('donut-total');
+  if(el) el.textContent=d.total||0;
+  const legend=document.getElementById('donut-legend');
+  if(legend) legend.innerHTML=[
+    {label:'Abiertos',val:d.ab,pct:Math.round(d.ab/tot*100),color:'#1D4ED8'},
+    {label:'Cerrados',val:d.ce,pct:Math.round(d.ce/tot*100),color:'#15803D'},
+    {label:'En proceso',val:d.pr,pct:Math.round(d.pr/tot*100),color:'#D97706'},
+    {label:'Vencidos',val:d.ve,pct:Math.round(d.ve/tot*100),color:'#B91C1C'},
+  ].map(it=>`<div style="display:flex;align-items:center;gap:8px">
+    <span style="width:10px;height:10px;border-radius:2px;background:${it.color};flex-shrink:0"></span>
+    <span style="font-size:13px;color:var(--g600);flex:1">${it.label}</span>
+    <span style="font-size:18px;font-weight:800;color:${it.color}">${it.val}</span>
+    <span style="font-size:12px;color:var(--g400);min-width:32px;text-align:right">${it.pct}%</span>
+  </div>`).join('');
+  const canvas=document.getElementById('donut-chart'); if(!canvas)return;
+  if(donutChart){ donutChart.destroy(); donutChart=null; }
+  if(typeof Chart==='undefined') return;
+  donutChart=new Chart(canvas,{
+    type:'doughnut',
+    data:{datasets:[{data:[d.ab,d.ce,d.pr,d.ve],backgroundColor:['#1D4ED8','#15803D','#D97706','#B91C1C'],borderWidth:4,borderColor:'transparent',hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:true}}}
+  });
+}
 function toggleFallasChart(){
   fallasChartOpen=!fallasChartOpen;
   const el=document.getElementById('bar-tipos');
@@ -953,11 +1012,20 @@ function renderDash(){
   const totalPeriodo=inP.length||1;
   const efectividad=Math.round(cerradosATiempo/totalPeriodo*100);
 
+  function arc(pct,color){
+    const r=22,c=28,full=Math.PI*r,off=full-(full*pct/100);
+    return`<svg width="56" height="34" viewBox="0 0 56 34" role="img" aria-label="${Math.round(pct)}%">
+      <path d="M 6 32 A ${r} ${r} 0 0 1 50 32" fill="none" stroke="#E5E7EB" stroke-width="5" stroke-linecap="round"/>
+      <path d="M 6 32 A ${r} ${r} 0 0 1 50 32" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${full}" stroke-dashoffset="${off}"/>
+      <text x="28" y="24" text-anchor="middle" font-size="9" font-weight="700" fill="${color}">${Math.round(pct)}%</text>
+    </svg>`;
+  }
+
   document.getElementById('kpi-grid').innerHTML=`
-    <div class="kpi kpi-blue" onclick="goToTickets('Abierto')" style="cursor:pointer"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-sub">${pct(ab,total)}% del período</div></div>
-    <div class="kpi kpi-amber" onclick="goToTickets('En Proceso')" style="cursor:pointer"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-sub">${pct(pr,total)}% del período</div></div>
-    <div class="kpi kpi-green" onclick="goToTickets('Cerrado')" style="cursor:pointer"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div><div class="kpi-sub">${pct(ce,total)}% del período</div></div>
-    <div class="kpi kpi-red" onclick="goToTickets('vencido')" style="cursor:pointer"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-sub">${pct(ve,total)}% del total</div></div>`;
+    <div class="kpi kpi-blue" onclick="goToTickets('Abierto')" style="cursor:pointer"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-sub">${pct(ab,total)}% del período</div><div class="kpi-arc">${arc(pct(ab,total),'#1D4ED8')}</div></div>
+    <div class="kpi kpi-amber" onclick="goToTickets('En Proceso')" style="cursor:pointer"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-sub">${pct(pr,total)}% del período</div><div class="kpi-arc">${arc(pct(pr,total),'#D97706')}</div></div>
+    <div class="kpi kpi-green" onclick="goToTickets('Cerrado')" style="cursor:pointer"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div><div class="kpi-sub">${pct(ce,total)}% del período</div><div class="kpi-arc">${arc(pct(ce,total),'#15803D')}</div></div>
+    <div class="kpi kpi-red" onclick="goToTickets('vencido')" style="cursor:pointer"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-sub">${pct(ve,total)}% del total</div><div class="kpi-arc">${arc(pct(ve,total),'#B91C1C')}</div></div>`;
 
   document.getElementById('kpi-grid2').innerHTML=`
     <div class="kpi kpi-green"><div class="kpi-lbl">Efectividad</div><div class="kpi-val">${efectividad}%</div><div class="kpi-sub">${cerradosATiempo} cerrados a tiempo de ${totalPeriodo} totales</div></div>
@@ -977,6 +1045,8 @@ function renderDash(){
     <div style="flex:1;padding:10px;text-align:center${isDir?';border-right:1px solid var(--g200)':''}"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Total período</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${inP.length}</div></div>
     ${isDir?`<div style="flex:1;padding:10px;text-align:center;background:var(--blue-l)"><div style="font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:3px">Prom. 1ra respuesta</div><div style="font-size:18px;font-weight:800;color:var(--blue)">${avgResp}</div></div>`:''}`;
 
+  window._dashData={ab,pr,ce,ve,total:inP.length};
+  if(donutOpen) renderDonut();
   if(estChartOpen) renderEstChart();
   if(fallasChartOpen) renderFallasChart();
   updateBadge();
@@ -1066,15 +1136,33 @@ function renderTickets(){
 function ticketCard(t){
   const sla=getSLA(t);
   const venc=isVencido(t);
-  const cls=venc?'tc-vencido':t.estado==='En Proceso'?'tc-proceso':t.estado==='Cerrado'?'tc-cerrado':'tc-abierto';
-  const slaBar=t.estado!=='Cerrado'?`<div class="sla-row s-${sla.status}"><div class="sla-track"><div class="sla-fill" style="width:${sla.pct}%"></div></div><span class="sla-lbl">${venc?'🔴 Vencido':'⏱ '+sla.label}</span></div>`:'';
+  const indColor=venc?'#B91C1C':t.estado==='En Proceso'?'#D97706':t.estado==='Cerrado'?'#15803D':'#1D4ED8';
+  const folioColor=venc?'#B91C1C':t.estado==='En Proceso'?'#D97706':t.estado==='Cerrado'?'#15803D':'#1D4ED8';
+  const cerradoStyle=t.estado==='Cerrado'?'opacity:.82':'';
   const atendidoBadge=t.atendidoPor?`<span class="badge b-gray"><i class="ti ti-tool" style="font-size:10px"></i> ${shortName(t.atendidoPor)}</span>`:'';
   const vencidoBadge=t.cerradoVencido?`<span class="badge b-red">⚠️ Cerrado fuera de tiempo</span>`:'';
-  return`<div class="tc ${cls}" onclick="openTicket('${t._key||t.id}')">
-    <div class="tc-top"><span class="tc-folio">${t.id}</span><span class="tc-time">${elapsed(t.ts)}</span></div>
-    <div class="tc-tipo">${t.cat}</div><div class="tc-sub">${t.sub}</div>
-    <div class="tc-desc">${t.desc}</div>
-    <div class="tc-meta">${urgBadge(t.urg)}${estadoBadge(t.estado)}${atendidoBadge}${vencidoBadge}</div>${slaBar}
+  let statusLine='';
+  if(venc){
+    const diasFuera=Math.floor((Date.now()-t.ts-(SLA_HRS[t.urg]||24)*3600000)/86400000);
+    statusLine=`<span style="font-size:11px;font-weight:700;color:#B91C1C">🔴 +${diasFuera}d fuera de tiempo</span>`;
+  } else if(t.estado==='Cerrado'){
+    statusLine=`<span class="badge b-green">✓ Cerrado</span>`;
+  } else if(t.estado==='En Proceso'){
+    statusLine=`<span class="badge b-amber">En proceso</span>`;
+  } else {
+    statusLine=`<span class="badge b-blue">Abierto</span>`;
+  }
+  return`<div class="tc" style="${cerradoStyle}" onclick="openTicket('${t._key||t.id}')">
+    <div class="tc-ind" style="background:${indColor}"></div>
+    <div class="tc-body">
+      <div class="tc-top">
+        <span class="tc-folio" style="color:${folioColor}">${t.id} · ${t.cat}</span>
+        <span class="tc-time">${elapsed(t.ts)} · ${t.urg}</span>
+      </div>
+      <div class="tc-cat">${t.sub}</div>
+      <div class="tc-desc">${t.desc}</div>
+      <div class="tc-bottom">${statusLine}<div style="display:flex;gap:5px">${atendidoBadge}${vencidoBadge}</div></div>
+    </div>
   </div>`;
 }
 
