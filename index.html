@@ -575,17 +575,17 @@ onValue(ref(db,'usuarios'),(snap)=>{
   if(window._authBooted) populateLoginSelect();
 },{onlyOnce:false});
 
-// SLA config
-onValue(ref(db,'sla'),(snap)=>{
-  if(snap.exists()){
-    const s=snap.val();
-    window._SLA=s;
-    // Update live SLA_HRS — will be picked up by getSLA on next call
-    if(s.Alta) window._slaAlta=s.Alta;
-    if(s.Media) window._slaMedia=s.Media;
-    if(s.Baja) window._slaBaja=s.Baja;
-  }
-},{onlyOnce:false});
+// SLA config — optional node, safe fallback
+try{
+  onValue(ref(db,'sla'),(snap)=>{
+    if(snap.exists()){
+      const s=snap.val();
+      if(s.Alta) window._slaAlta=s.Alta;
+      if(s.Media) window._slaMedia=s.Media;
+      if(s.Baja) window._slaBaja=s.Baja;
+    }
+  },{onlyOnce:false});
+}catch(e){ console.warn('SLA config not available'); }
 
 // Tickets — migrate legacy states on load
 onValue(ref(db,'tickets'),(snap)=>{
@@ -1457,7 +1457,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
   try{
     const s=sessionStorage.getItem('fg_u');
-    const timeout=setTimeout(()=>showLogin(),8000);
+    const timeout=setTimeout(()=>showLogin(),15000);
     const check=setInterval(()=>{
       if(window._fbReady&&window._usuariosReady){clearInterval(check);clearTimeout(timeout);
         populateLoginSelect();
