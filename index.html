@@ -327,8 +327,11 @@ textarea{resize:none;min-height:80px}
         <div style="display:flex;border:1px solid var(--g200);border-radius:var(--rs);overflow:hidden" id="dash-avgs"></div>
       </div>
       <div class="card">
-        <div class="card-title"><i class="ti ti-chart-bar"></i>Fallas más frecuentes</div>
-        <div class="bc" id="bar-tipos"></div>
+        <div class="card-title" style="cursor:pointer" onclick="toggleFallasChart()">
+          <i class="ti ti-chart-bar"></i>Fallas más frecuentes
+          <i class="ti ti-chevron-down" id="fallas-chevron" style="margin-left:auto;font-size:14px;color:var(--g400)"></i>
+        </div>
+        <div id="bar-tipos" style="display:none"></div>
       </div>
       <div class="card">
         <div class="card-title" style="cursor:pointer" onclick="toggleEstChart()">
@@ -495,6 +498,38 @@ textarea{resize:none;min-height:80px}
   </div>
 </div>
 
+<div class="overlay" id="m-edit" onclick="closeModal('m-edit')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <p class="modal-title">Editar ticket</p>
+    <div class="fg"><label>Estación <span>*</span></label><select id="e-est"></select></div>
+    <div class="fg"><label>Categoría <span>*</span></label><select id="e-cat" onchange="loadSubs('e-cat','e-sub')"></select></div>
+    <div class="fg"><label>Tipo de falla <span>*</span></label><select id="e-sub"></select></div>
+    <div class="fg"><label>Urgencia <span>*</span></label>
+      <select id="e-urg">
+        <option value="Alta">Alta</option>
+        <option value="Media">Media</option>
+        <option value="Baja">Baja</option>
+      </select>
+    </div>
+    <div class="fg"><label>Descripción <span>*</span></label><textarea id="e-desc" placeholder="Descripción..."></textarea></div>
+    <div class="fg"><label>Reportado por</label><input type="text" id="e-rep"></div>
+    <div class="fg"><label>Estado</label>
+      <select id="e-estado">
+        <option value="Abierto">Abierto</option>
+        <option value="En Proceso">En Proceso</option>
+        <option value="Cerrado">Cerrado</option>
+      </select>
+    </div>
+    <div class="fg"><label>Fecha de creación (timestamp)</label><input type="text" id="e-ts" placeholder="ej. 1783454159160"></div>
+    <div class="fg"><label>Fecha en proceso (timestamp)</label><input type="text" id="e-tsi" placeholder="dejar vacío si no aplica"></div>
+    <div class="fg"><label>Fecha de cierre (timestamp)</label><input type="text" id="e-tsc" placeholder="dejar vacío si no aplica"></div>
+    <div class="fg"><label>Atendido por</label><input type="text" id="e-atendido"></div>
+    <div class="fg"><label>Acción realizada</label><textarea id="e-accion" placeholder="Descripción de lo que se hizo..."></textarea></div>
+    <button class="btn-main" onclick="saveEditTicket()"><i class="ti ti-check"></i>Guardar cambios</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- FIREBASE -->
@@ -614,7 +649,23 @@ let dashPeriod='mes';
 let activeFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
 let pendingFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
 let nsUrgSel=''; let addSubCatId=''; let passUserKey='';
-let estChartOpen=false;
+let fallasChartOpen=false;
+function toggleFallasChart(){
+  fallasChartOpen=!fallasChartOpen;
+  const el=document.getElementById('bar-tipos');
+  const ch=document.getElementById('fallas-chevron');
+  if(el) el.style.display=fallasChartOpen?'block':'none';
+  if(ch) ch.className='ti '+(fallasChartOpen?'ti-chevron-up':'ti-chevron-down')+' ';
+  if(fallasChartOpen) renderFallasChart();
+}
+
+function renderFallasChart(){
+  const [pStart,pEnd]=getPeriodRange(dashPeriod);
+  const inP=window._tickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
+  const tipos={};inP.forEach(t=>{tipos[t.cat]=(tipos[t.cat]||0)+1;});
+  const mx2=Math.max(...Object.values(tipos),1);
+  document.getElementById('bar-tipos').innerHTML=Object.entries(tipos).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([tipo,cnt])=>`<div class="br"><span class="bl">${tipo}</span><div class="bt"><div class="bf" style="width:${Math.round(cnt/mx2*100)}%"></div></div><span class="bn">${cnt}</span></div>`).join('') || '<p style="font-size:12px;color:var(--g400)">Sin datos</p>';
+}
 
 // ── HELPERS ───────────────────────────────────────────────
 function getRole(u){
@@ -873,10 +924,10 @@ function renderDash(){
   const ve=inP.filter(t=>isVencido(t)).length;
 
   document.getElementById('kpi-grid').innerHTML=`
-    <div class="kpi kpi-blue"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-sub">${pct(ab,total)}% del período</div></div>
-    <div class="kpi kpi-amber"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-sub">${pct(pr,total)}% del período</div></div>
-    <div class="kpi kpi-green"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div><div class="kpi-sub">${pct(ce,total)}% del período</div></div>
-    <div class="kpi kpi-red"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-sub">${pct(ve,total)}% del total</div></div>`;
+    <div class="kpi kpi-blue" onclick="goToTickets('Abierto')" style="cursor:pointer"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-sub">${pct(ab,total)}% del período</div></div>
+    <div class="kpi kpi-amber" onclick="goToTickets('En Proceso')" style="cursor:pointer"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-sub">${pct(pr,total)}% del período</div></div>
+    <div class="kpi kpi-green" onclick="goToTickets('Cerrado')" style="cursor:pointer"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div><div class="kpi-sub">${pct(ce,total)}% del período</div></div>
+    <div class="kpi kpi-red" onclick="goToTickets('vencido')" style="cursor:pointer"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-sub">${pct(ve,total)}% del total</div></div>`;
 
   // Tiempos promedio
   const cerrados=inP.filter(t=>t.estado==='Cerrado'&&t.tsC&&t.ts);
@@ -892,12 +943,8 @@ function renderDash(){
     <div style="flex:1;padding:10px;text-align:center${isDir?';border-right:1px solid var(--g200)':''}"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Total período</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${inP.length}</div></div>
     ${isDir?`<div style="flex:1;padding:10px;text-align:center;background:var(--blue-l)"><div style="font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:3px">Prom. 1ra respuesta</div><div style="font-size:18px;font-weight:800;color:var(--blue)">${avgResp}</div></div>`:''}`;
 
-  // Fallas frecuentes
-  const tipos={};inP.forEach(t=>{tipos[t.cat]=(tipos[t.cat]||0)+1;});
-  const mx2=Math.max(...Object.values(tipos),1);
-  document.getElementById('bar-tipos').innerHTML=Object.entries(tipos).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([tipo,cnt])=>`<div class="br"><span class="bl">${tipo}</span><div class="bt"><div class="bf" style="width:${Math.round(cnt/mx2*100)}%"></div></div><span class="bn">${cnt}</span></div>`).join('');
-
   if(estChartOpen) renderEstChart();
+  if(fallasChartOpen) renderFallasChart();
   updateBadge();
 }
 
@@ -907,6 +954,19 @@ function setStatusFilter(val, el){
   document.querySelectorAll('#v-tickets .period-btn').forEach(b=>b.classList.remove('on'));
   if(el) el.classList.add('on');
   renderTickets();
+}
+
+function goToTickets(estado){
+  activeFilters.estado=estado;
+  navTo('tickets',null);
+  // Sync the status filter buttons visually
+  setTimeout(()=>{
+    document.querySelectorAll('#v-tickets .period-btn').forEach(b=>b.classList.remove('on'));
+    const map={'Abierto':'sf-abierto','En Proceso':'sf-proceso','Cerrado':'sf-cerrado','vencido':'sf-vencido'};
+    const btnId=map[estado];
+    if(btnId){const btn=document.getElementById(btnId);if(btn)btn.classList.add('on');}
+    renderTickets();
+  },50);
 }
 
 function applyFiltersToList(list){
@@ -932,7 +992,7 @@ function hasActiveFilters(){
 
 function renderTickets(){
   let base=[...window._tickets];
-  if(window._CR==='sup'&&window._CU!=='supervision'){const zones={'sup-dayanara':['San Carlos','San Germán','MG','Loma Linda','Miramar'],'sup-juanmanuel':['Petrolera','Arcaza','Corsario','Estadio','Batuecas'],'sup-edgar':['Valiente']};const z=zones[window._CU]||[];if(z.length)base=base.filter(t=>z.includes(t.est));}
+  if(window._CR==='sup'){const z=SUP_ZONES[window._CU]||[];base=base.filter(t=>z.includes(t.est));}
   let list=applyFiltersToList(base);
 
   // Update filter button appearance
@@ -1088,7 +1148,8 @@ function openTicket(key){
     <button class="back-btn" onclick="closeModal('m-detail')"><i class="ti ti-arrow-left"></i>Regresar</button>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
       <div><p style="font-size:11px;font-weight:800;color:var(--red);letter-spacing:.05em">${t.id}</p><p style="font-size:17px;font-weight:800">${t.cat}</p><p style="font-size:13px;color:var(--g500);margin-top:2px">${t.sub}</p></div>
-      <div style="text-align:right">${urgBadge(t.urg)}<br><span style="font-size:11px;color:var(--g400);margin-top:4px;display:block">${t.est}</span></div>
+      <div style="text-align:right">${urgBadge(t.urg)}${window._CR==='director'?`<br><button class="bs bs-out" style="margin-top:6px;font-size:11px;padding:4px 8px" onclick="closeModal('m-detail');openEditTicket('${key}')"><i class="ti ti-pencil"></i>Editar</button>`:''}
+      <br><span style="font-size:11px;color:var(--g400);margin-top:4px;display:block">${t.est}</span></div>
     </div>
     <div style="display:flex;gap:8px;margin:10px 0">
       <div style="flex:1;background:var(--g50);border:1px solid var(--g200);border-radius:var(--rs);padding:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Tiempo total</div><div style="font-size:15px;font-weight:800">${tC}</div></div>
@@ -1286,6 +1347,62 @@ function toggleTecActivo(key){
   if(!window._usuarios||!window._usuarios[key])return;
   const actual=window._usuarios[key].activo!==false;
   window._usuarios[key].activo=!actual;fbSet('usuarios',window._usuarios);renderUsuarios();showToast(actual?'Dado de baja':'Reactivado');
+}
+
+// ── EDIT TICKET (director only) ───────────────────────────
+let editKey='';
+function openEditTicket(key){
+  const t=window._tickets.find(x=>(x._key||x.id)===key); if(!t)return;
+  editKey=key;
+  // Populate estacion
+  const eEst=document.getElementById('e-est');
+  eEst.innerHTML=ESTACIONES.map(e=>`<option value="${e}" ${t.est===e?'selected':''}>${e}</option>`).join('');
+  // Populate categoria
+  const eCat=document.getElementById('e-cat');
+  const ac=(window._cats||[]).filter(c=>c.active);
+  eCat.innerHTML=ac.map(c=>`<option value="${c.id}" ${t.cat===c.name?'selected':''}>${c.name}</option>`).join('');
+  // Populate subcategoria
+  const catObj=ac.find(c=>c.name===t.cat);
+  const eSub=document.getElementById('e-sub');
+  if(catObj) eSub.innerHTML=catObj.subs.filter(s=>s.active).map(s=>`<option value="${s.id}" ${t.sub===s.name?'selected':''}>${s.name}</option>`).join('');
+  // Rest of fields
+  document.getElementById('e-urg').value=t.urg||'Media';
+  document.getElementById('e-desc').value=t.desc||'';
+  document.getElementById('e-rep').value=t.rep||'';
+  document.getElementById('e-estado').value=t.estado||'Abierto';
+  document.getElementById('e-ts').value=t.ts||'';
+  document.getElementById('e-tsi').value=t.tsI||'';
+  document.getElementById('e-tsc').value=t.tsC||'';
+  document.getElementById('e-atendido').value=t.atendidoPor||'';
+  document.getElementById('e-accion').value=t.accion||'';
+  openModal('m-edit');
+}
+
+function saveEditTicket(){
+  if(!editKey)return;
+  const catId=document.getElementById('e-cat').value;
+  const subId=document.getElementById('e-sub').value;
+  const catObj=(window._cats||[]).find(c=>c.id===catId);
+  const subObj=catObj?.subs.find(s=>s.id===subId);
+  const tsI=document.getElementById('e-tsi').value.trim();
+  const tsC=document.getElementById('e-tsc').value.trim();
+  const updates={
+    est:document.getElementById('e-est').value,
+    cat:catObj?.name||'',
+    sub:subObj?.name||'',
+    urg:document.getElementById('e-urg').value,
+    desc:document.getElementById('e-desc').value.trim(),
+    rep:document.getElementById('e-rep').value.trim(),
+    estado:document.getElementById('e-estado').value,
+    ts:parseInt(document.getElementById('e-ts').value)||Date.now(),
+    tsI:tsI?parseInt(tsI):null,
+    tsC:tsC?parseInt(tsC):null,
+    atendidoPor:document.getElementById('e-atendido').value.trim(),
+    accion:document.getElementById('e-accion').value.trim(),
+  };
+  fbUpd(editKey,updates);
+  closeModal('m-edit');
+  showToast('✅ Ticket actualizado');
 }
 
 // ── MODAL / TOAST ─────────────────────────────────────────
