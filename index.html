@@ -327,8 +327,9 @@ textarea{resize:none;min-height:80px}
         <button class="period-btn" onclick="setPeriod('semana',this)">Esta semana</button>
         <button class="period-btn" onclick="setPeriod('mes-ant',this)">Mes anterior</button>
       </div>
+      <div style="font-size:13px;font-weight:600;color:var(--g500);margin-bottom:8px" id="dash-total"></div>
       <div class="kpi-row" id="kpi-grid"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px" id="kpi-grid2"></div>
+      <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:16px" id="kpi-grid2"></div>
       <div class="donut-panel">
         <div class="donut-header" onclick="toggleDonut()">
           <span style="font-size:13px;font-weight:700;color:var(--g800)"><i class="ti ti-chart-pie" style="margin-right:6px;font-size:15px;color:var(--red)"></i>Vista general del período</span>
@@ -379,6 +380,7 @@ textarea{resize:none;min-height:80px}
         <button class="period-btn" id="sf-proceso" onclick="setStatusFilter('En Proceso',this)">En proceso</button>
         <button class="period-btn" id="sf-cerrado" onclick="setStatusFilter('Cerrado',this)">Cerrados</button>
         <button class="period-btn" id="sf-vencido" onclick="setStatusFilter('vencido',this)">🔴 Vencidos</button>
+        <button class="period-btn" id="sf-fuera" onclick="setStatusFilter('fuera',this)">⚠️ Fuera de tiempo</button>
         <button class="filter-btn" id="filter-toggle-btn" onclick="openFilterPanel()"><i class="ti ti-adjustments-horizontal"></i></button>
       </div>
       <div id="tlist"></div>
@@ -698,6 +700,8 @@ let pendingFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
 let nsUrgSel=''; let addSubCatId=''; let passUserKey='';
 let donutOpen=false;
 let donutChart=null;
+let estChartOpen=false;
+let fallasChartOpen=false;
 function toggleDonut(){
   donutOpen=!donutOpen;
   const body=document.getElementById('donut-body');
@@ -785,7 +789,7 @@ function getSLA(t){
 }
 
 function isVencido(t){ return t.estado!=='Cerrado'&&getSLA(t).status==='over'; }
-function fmtHrs(ms){ if(!ms||ms<=0)return'—'; const h=ms/3600000; return h<1?Math.round(h*60)+'min':h.toFixed(1)+'h'; }
+function fmtHrs(ms){ if(!ms||ms<=0)return'—'; const h=ms/3600000; if(h<1)return Math.round(h*60)+'min'; if(h<24)return h.toFixed(1)+'h'; const d=Math.floor(h/24); const hr=Math.round(h%24); return hr>0?d+'d '+hr+'h':d+'d'; }
 function elapsed(ts){ const m=Math.round((Date.now()-ts)/60000); if(m<60)return m+'m'; if(m<1440)return Math.round(m/60)+'h'; return Math.round(m/1440)+'d'; }
 function fmtDate(ts){ if(!ts)return''; return new Date(ts).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
 function pct(n,t){ return t>0?Math.round(n/t*100):0; }
@@ -814,6 +818,7 @@ function sortTickets(list){
 }
 
 function _refreshCurrentView(){
+  if(!window._appReady) return;
   // No refrescar si hay un modal abierto — evita el bug de "conectando" al editar
   if(document.querySelector('.overlay.on')) return;
   const v=document.querySelector('.view.on'); if(!v)return;
@@ -897,6 +902,7 @@ function startApp(){
   document.getElementById('sb-user').textContent=name;
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
   populateSelects(); buildNav();
+  window._appReady=true;
   if(window._CR==='est'){showView('tickets');renderTickets();}
   else{showView('dash');renderDash();}
   // Build estacion chips for filter panel
@@ -1023,6 +1029,9 @@ function renderDash(){
     </svg>`;
   }
 
+  // Total tickets primero
+  const totalEl=document.getElementById('dash-total'); if(totalEl)totalEl.textContent=inP.length+' ticket'+(inP.length!==1?'s':'');
+
   document.getElementById('kpi-grid').innerHTML=`
     <div class="kpi kpi-blue" onclick="goToTickets('Abierto')" style="cursor:pointer"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-sub">${pct(ab,total)}% del período</div><div class="kpi-arc">${arc(pct(ab,total),'#1D4ED8')}</div></div>
     <div class="kpi kpi-amber" onclick="goToTickets('En Proceso')" style="cursor:pointer"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-sub">${pct(pr,total)}% del período</div><div class="kpi-arc">${arc(pct(pr,total),'#D97706')}</div></div>
@@ -1030,8 +1039,7 @@ function renderDash(){
     <div class="kpi kpi-red" onclick="goToTickets('vencido')" style="cursor:pointer"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-sub">${pct(ve,total)}% del total</div><div class="kpi-arc">${arc(pct(ve,total),'#B91C1C')}</div></div>`;
 
   document.getElementById('kpi-grid2').innerHTML=`
-    <div class="kpi kpi-green"><div class="kpi-lbl">Efectividad</div><div class="kpi-val">${efectividad}%</div><div class="kpi-sub">${cerradosATiempo} cerrados a tiempo de ${totalPeriodo} totales</div></div>
-    <div class="kpi kpi-red"><div class="kpi-lbl">Cerrados fuera de tiempo</div><div class="kpi-val">${cv}</div><div class="kpi-sub">${cerradosTotal>0?pct(cv,cerradosTotal):0}% de los cerrados</div></div>`;
+    <div class="kpi kpi-red" style="grid-column:span 1"><div class="kpi-lbl">Cerrados fuera de tiempo</div><div class="kpi-val">${cv}</div><div class="kpi-sub">${cerradosTotal>0?pct(cv,cerradosTotal):0}% de los cerrados</div></div>`;
 
   // Tiempos promedio
   const cerrados=inP.filter(t=>t.estado==='Cerrado'&&t.tsC&&t.ts);
@@ -1047,7 +1055,7 @@ function renderDash(){
     <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Promedio de resolución</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgC}</div><div style="font-size:10px;color:var(--g400);margin-top:2px">${cerrados.length} ticket${cerrados.length!==1?'s':''} cerrado${cerrados.length!==1?'s':''}</div></div>
     <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:3px">Ticket más antiguo</div><div style="font-size:18px;font-weight:800;color:var(--red)">${masAntiguo}</div><div style="font-size:10px;color:var(--g400);margin-top:2px">${masAntiguoId}</div></div>
     <div style="flex:1;padding:10px;text-align:center${isDir?';border-right:1px solid var(--g200)':''}"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Total período</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${inP.length}</div><div style="font-size:10px;color:var(--g400);margin-top:2px">tickets este período</div></div>
-    ${isDir?`<div style="flex:1;padding:10px;text-align:center;background:var(--blue-l)"><div style="font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:3px">Efectividad global</div><div style="font-size:18px;font-weight:800;color:var(--blue)">${efectividad}%</div><div style="font-size:10px;color:var(--blue);margin-top:2px">${cerradosATiempo} a tiempo de ${totalPeriodo}</div></div>`:''}`;
+    ${isDir?`<div style="flex:1;padding:10px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Efectividad</div><div style="font-size:18px;font-weight:800;color:var(--green)">${efectividad}%</div><div style="font-size:10px;color:var(--g400);margin-top:2px">${cerradosATiempo} de ${totalPeriodo} a tiempo</div></div>`:''}`;
 
   window._dashData={ab,pr,ce,ve,total:inP.length};
   if(donutOpen) renderDonut();
@@ -1070,7 +1078,7 @@ function goToTickets(estado){
   // Sync the status filter buttons visually
   setTimeout(()=>{
     document.querySelectorAll('#v-tickets .period-btn').forEach(b=>b.classList.remove('on'));
-    const map={'Abierto':'sf-abierto','En Proceso':'sf-proceso','Cerrado':'sf-cerrado','vencido':'sf-vencido'};
+    const map={'Abierto':'sf-abierto','En Proceso':'sf-proceso','Cerrado':'sf-cerrado','vencido':'sf-vencido','fuera':'sf-fuera'};
     const btnId=map[estado];
     if(btnId){const btn=document.getElementById(btnId);if(btn)btn.classList.add('on');}
     renderTickets();
@@ -1080,6 +1088,7 @@ function goToTickets(estado){
 function applyFiltersToList(list){
   const f=activeFilters;
   if(f.estado==='vencido') list=list.filter(t=>isVencido(t));
+  else if(f.estado==='fuera') list=list.filter(t=>t.cerradoVencido===true);
   else if(f.estado!=='todos') list=list.filter(t=>t.estado===f.estado);
   if(f.urg!=='todas') list=list.filter(t=>t.urg===f.urg);
   if(f.est!=='todas') list=list.filter(t=>t.est===f.est);
