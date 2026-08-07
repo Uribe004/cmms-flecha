@@ -686,9 +686,13 @@ onValue(ref(db,'cats'),(snap)=>{
   if(snap.exists()){
     const val=snap.val();
     // Normalizar siempre a array
-    window._cats=Array.isArray(val)?val:Object.values(val);
-    // Asegurar que cada cat tenga subs como array
-    window._cats=window._cats.map(c=>({...c,subs:c.subs?Array.isArray(c.subs)?c.subs:Object.values(c.subs):[]}));
+    const raw=Array.isArray(val)?val:Object.values(val);
+    window._cats=raw.filter(c=>c&&c.id&&c.name).map(c=>{
+      let subs=c.subs||[];
+      if(!Array.isArray(subs)) subs=Object.values(subs);
+      subs=subs.filter(s=>s&&s.id&&s.name);
+      return {...c,subs};
+    });
   } else {
     window._cats=JSON.parse(JSON.stringify(window._DEFAULT_CATS));
     set(ref(db,'cats'),window._DEFAULT_CATS);
@@ -1714,14 +1718,26 @@ function renderCfg(){
     </div>`).join('');
 }
 function toggleCfgCat(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none';}
-function toggleCatActive(catId){const cats=Array.isArray(window._cats)?window._cats:Object.values(window._cats||{});const c=cats.find(x=>x.id===catId);if(!c)return;c.active=!c.active;fbSet('cats',window._cats);renderCfg();populateSelects();showToast(c.active?'Activada':'Desactivada');}
-function toggleSubActive(catId,subId){const cats=Array.isArray(window._cats)?window._cats:Object.values(window._cats||{});const c=cats.find(x=>x.id===catId);const s=c?.subs.find(x=>x.id===subId);if(!s)return;s.active=!s.active;fbSet('cats',window._cats);renderCfg();populateSelects();showToast(s.active?'Activada':'Desactivada');}
-function deleteSub(catId,subId){const cats=Array.isArray(window._cats)?window._cats:Object.values(window._cats||{});const c=cats.find(x=>x.id===catId);if(!c)return;c.subs=c.subs.filter(s=>s.id!==subId);fbSet('cats',window._cats);renderCfg();populateSelects();showToast('Eliminada');}
+function toggleCatActive(catId){const cats=Array.isArray(window._cats)?window._cats:Object.values(window._cats||{});const c=cats.find(x=>x.id===catId);if(!c)return;c.active=!c.active;saveCats();renderCfg();populateSelects();showToast(c.active?'Activada':'Desactivada');}
+function toggleSubActive(catId,subId){const cats=Array.isArray(window._cats)?window._cats:Object.values(window._cats||{});const c=cats.find(x=>x.id===catId);const s=c?.subs.find(x=>x.id===subId);if(!s)return;s.active=!s.active;saveCats();renderCfg();populateSelects();showToast(s.active?'Activada':'Desactivada');}
+function deleteSub(catId,subId){const cats=Array.isArray(window._cats)?window._cats:Object.values(window._cats||{});const c=cats.find(x=>x.id===catId);if(!c)return;c.subs=c.subs.filter(s=>s.id!==subId);saveCats();renderCfg();populateSelects();showToast('Eliminada');}
 function openAddCat(){document.getElementById('nc-name').value='';openModal('m-addcat');}
-function saveNewCat(){const name=document.getElementById('nc-name').value.trim();if(!name){showToast('Escribe un nombre');return;}(window._cats||[]).push({id:'c'+Date.now(),name,active:true,subs:[]});fbSet('cats',window._cats);closeModal('m-addcat');renderCfg();populateSelects();showToast('Categoría "'+name+'" creada');}
+function saveCats(){
+  // Guardar como objeto keyed por id para evitar que Firebase lo convierta a array numérico
+  if(!window._cats||!window._db)return;
+  const obj={};
+  window._cats.forEach(c=>{
+    const subsObj={};
+    (c.subs||[]).forEach(s=>{ subsObj[s.id]=s; });
+    obj[c.id]={...c,subs:subsObj};
+  });
+  fbSet('cats',obj);
+}
+
+function saveNewCat(){const name=document.getElementById('nc-name').value.trim();if(!name){showToast('Escribe un nombre');return;}(window._cats||[]).push({id:'c'+Date.now(),name,active:true,subs:[]});saveCats();closeModal('m-addcat');renderCfg();populateSelects();showToast('Categoría "'+name+'" creada');}
 function openAddSub(catId,catName){addSubCatId=catId;nsUrgSel='';document.getElementById('ns-name').value='';document.getElementById('addsub-catname').textContent=catName;['alta','media','baja'].forEach(u=>{const b=document.getElementById('nsu-'+u);if(b)b.className='ub';});openModal('m-addsub');}
 function setNsUrg(u){nsUrgSel=u;['alta','media','baja'].forEach(x=>{const b=document.getElementById('nsu-'+x);if(b)b.className='ub';});const sel=document.getElementById('nsu-'+u.toLowerCase());if(sel)sel.className='ub sel-'+u.toLowerCase();}
-function saveNewSub(){const name=document.getElementById('ns-name').value.trim();if(!name){showToast('Escribe un nombre');return;}if(!nsUrgSel){showToast('Selecciona la urgencia');return;}const c=(window._cats||[]).find(x=>x.id===addSubCatId);if(!c)return;c.subs.push({id:'s'+Date.now(),name,urg:nsUrgSel,active:true});fbSet('cats',window._cats);closeModal('m-addsub');renderCfg();populateSelects();showToast('Subcategoría "'+name+'" agregada');}
+function saveNewSub(){const name=document.getElementById('ns-name').value.trim();if(!name){showToast('Escribe un nombre');return;}if(!nsUrgSel){showToast('Selecciona la urgencia');return;}const c=(window._cats||[]).find(x=>x.id===addSubCatId);if(!c)return;c.subs.push({id:'s'+Date.now(),name,urg:nsUrgSel,active:true});saveCats();closeModal('m-addsub');renderCfg();populateSelects();showToast('Subcategoría "'+name+'" agregada');}
 
 // ── USUARIOS ──────────────────────────────────────────────
 const ROL_LABELS={director:'Dirección',jefe:'Mantenimiento',tec:'Mantenimiento',sup:'Supervisores',est:'Estaciones'};
