@@ -683,8 +683,16 @@ window._fbReady=true;
 
 // Cats
 onValue(ref(db,'cats'),(snap)=>{
-  window._cats=snap.exists()?snap.val():JSON.parse(JSON.stringify(window._DEFAULT_CATS));
-  if(!snap.exists()) set(ref(db,'cats'),window._DEFAULT_CATS);
+  if(snap.exists()){
+    const val=snap.val();
+    // Normalizar siempre a array
+    window._cats=Array.isArray(val)?val:Object.values(val);
+    // Asegurar que cada cat tenga subs como array
+    window._cats=window._cats.map(c=>({...c,subs:c.subs?Array.isArray(c.subs)?c.subs:Object.values(c.subs):[]}));
+  } else {
+    window._cats=JSON.parse(JSON.stringify(window._DEFAULT_CATS));
+    set(ref(db,'cats'),window._DEFAULT_CATS);
+  }
   if(window._CU){ populateSelects(); if(document.getElementById('v-cfg')?.classList.contains('on')) renderCfg(); }
 },{onlyOnce:false});
 
