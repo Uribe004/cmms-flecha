@@ -322,13 +322,12 @@ textarea{resize:none;min-height:80px}
         <div><div class="sh-title">Dashboard</div><div class="sh-sub" id="dash-date"></div></div>
         <div style="display:flex;gap:8px">
           <button class="bs bs-out" style="padding:7px 10px" onclick="renderDash()"><i class="ti ti-refresh"></i></button>
-          <button class="bs bs-red" id="btn-reporte" style="display:none;padding:7px 12px;font-size:12px" onclick="generarReporteMensual()"><i class="ti ti-file-type-pdf"></i>Reporte del período</button>
+          <button class="bs bs-red" id="btn-reporte" style="display:none;padding:7px 12px;font-size:12px" onclick="openReporteModal()"><i class="ti ti-file-type-pdf"></i>Reporte</button>
         </div>
       </div>
       <div class="period-row">
-        <button class="period-btn on" onclick="setPeriod('mes',this)">Este mes</button>
-        <button class="period-btn" onclick="setPeriod('semana',this)">Esta semana</button>
-        <select id="period-hist" onchange="setPeriodHist(this)" style="padding:5px 10px;border:1px solid var(--g300);border-radius:20px;font-size:12px;font-weight:600;color:var(--g600);background:var(--white);cursor:pointer;-webkit-appearance:none;appearance:none"><option value="">Mes anterior...</option></select>
+        <button class="period-btn on" onclick="setPeriod('mes',this)">Mes actual</button>
+        <select id="period-hist" onchange="setPeriodHist(this)" style="padding:5px 10px;border:1px solid var(--g300);border-radius:20px;font-size:12px;font-weight:600;color:var(--g600);background:var(--white);cursor:pointer;-webkit-appearance:none;appearance:none"><option value="">Historial</option></select>
       </div>
       <div style="font-size:13px;font-weight:600;color:var(--g500);margin-bottom:8px" id="dash-total"></div>
       <div class="kpi-row" id="kpi-grid"></div>
@@ -483,6 +482,12 @@ textarea{resize:none;min-height:80px}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px" id="act-day-summary"></div>
       </div>
 
+      <!-- Conexiones de usuarios -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title"><i class="ti ti-users"></i>Última conexión por usuario</div>
+        <div id="act-conexiones"><p style="font-size:12px;color:var(--g400)">Cargando...</p></div>
+      </div>
+
       <!-- Historial de planes -->
       <div class="card-title" style="margin-bottom:8px"><i class="ti ti-list-check" style="color:var(--red)"></i>Historial de planes</div>
       <div id="plan-historial"></div>
@@ -619,6 +624,20 @@ textarea{resize:none;min-height:80px}
     <div class="fg"><label>Atendido por</label><input type="text" id="e-atendido"></div>
     <div class="fg"><label>Acción realizada</label><textarea id="e-accion" placeholder="Descripción de lo que se hizo..."></textarea></div>
     <button class="btn-main" onclick="saveEditTicket()"><i class="ti ti-check"></i>Guardar cambios</button>
+  </div>
+</div>
+
+<div class="overlay" id="m-reporte" onclick="closeModal('m-reporte')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <p class="modal-title">Generar reporte</p>
+    <p style="font-size:13px;color:var(--g500);margin-bottom:14px">Selecciona el período del reporte</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <button class="bs bs-out" style="justify-content:flex-start;gap:10px" onclick="closeModal('m-reporte');generarReporteMensual('mes')">
+        <i class="ti ti-calendar" style="color:var(--red)"></i>Mes actual
+      </button>
+      <div id="reporte-hist-list"></div>
+    </div>
   </div>
 </div>
 
@@ -993,9 +1012,16 @@ function buildHistSelector(){
 
 function setPeriodHist(sel){
   if(!sel.value)return;
-  // Quitar .on de los botones de periodo
   document.querySelectorAll('#v-dash .period-row .period-btn').forEach(b=>b.classList.remove('on'));
   dashPeriod=sel.value;
+  renderDash();
+}
+function setPeriod(p,el){
+  dashPeriod=p;
+  document.querySelectorAll('#v-dash .period-row .period-btn').forEach(b=>b.classList.remove('on'));
+  if(el)el.classList.add('on');
+  // Resetear historial selector
+  const hs=document.getElementById('period-hist'); if(hs)hs.value='';
   renderDash();
 }
 
@@ -1104,7 +1130,9 @@ function doLogin(){
       fbSet('usuarios',window._usuarios);
     }
     errEl.style.display='none'; window._CU='encargado'; window._CR='est';
-    try{sessionStorage.setItem('fg_u','encargado');}catch(e){} startApp(); return;
+    try{sessionStorage.setItem('fg_u','encargado');}catch(e){}
+    if(window._db) window._update(window._ref(window._db,'conexiones/encargado'),{ultimaConexion:Date.now(),nombre:'Encargado de estación'});
+    startApp(); return;
   }
   const pass=document.getElementById('au-pass').value;
   const usr=(window._usuarios||{})[u];
@@ -1113,7 +1141,9 @@ function doLogin(){
   if(usr.pass!==pass){errEl.textContent='Contraseña incorrecta.';errEl.style.display='block';return;}
   if(usr.activo===false){errEl.textContent='Usuario dado de baja. Contacta a tu gerente.';errEl.style.display='block';return;}
   errEl.style.display='none'; window._CU=u; window._CR=getRole(u);
-  try{sessionStorage.setItem('fg_u',u);}catch(e){} startApp();
+  try{sessionStorage.setItem('fg_u',u);}catch(e){}
+  if(window._db) window._update(window._ref(window._db,'conexiones/'+u),{ultimaConexion:Date.now(),nombre:UNAMES[u]||u});
+  startApp();
 }
 
 function logout(){
@@ -1242,11 +1272,11 @@ function renderEstChart(){
 function renderDash(){
   const [pStart,pEnd]=getPeriodRange(dashPeriod);
   const inP=window._tickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
-  const total=inP.length||1;
+  const totalReal=ab+pr+ce;
+  const total=totalReal||1;
   const ab=inP.filter(t=>t.estado==='Abierto').length;
   const pr=inP.filter(t=>t.estado==='En Proceso').length;
   const ce=inP.filter(t=>t.estado==='Cerrado').length;
-  const ve=inP.filter(t=>isVencido(t)).length;
 
   const cv=inP.filter(t=>t.cerradoVencido===true).length;
   const cerradosTotal=inP.filter(t=>t.estado==='Cerrado').length;
@@ -1255,17 +1285,8 @@ function renderDash(){
   const cerradosATiempo=cerradosTotal; // simplificado: todos los cerrados cuentan
   const totalPeriodo=abiertosTotal;
 
-  // Desglose de abiertos por mes
-  const abiertosTickets=window._tickets.filter(t=>t.estado!=='Cerrado');
-  const mesByMonth={};
-  abiertosTickets.forEach(t=>{
-    const d=new Date(t.ts); const key=d.getFullYear()+'-'+(d.getMonth()+1);
-    const label=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()];
-    if(!mesByMonth[key]) mesByMonth[key]={label,yr:d.getFullYear(),mo:d.getMonth(),cnt:0};
-    mesByMonth[key].cnt++;
-  });
-  const desgloseArr=Object.values(mesByMonth).sort((a,b)=>b.yr===a.yr?b.mo-a.mo:b.yr-a.yr).slice(0,3);
-  const desgloseMeses=desgloseArr.length>1?('<div style="border-top:0.5px solid rgba(29,78,216,.2);margin-top:6px;padding-top:5px;display:flex;flex-direction:column;gap:2px">'+desgloseArr.map(function(m){return'<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:var(--g500)">'+m.label+'</span><span style="font-weight:700;color:var(--blue)">'+m.cnt+'</span></div>';}).join('')+'</div>'):'';
+
+
 
   function arc(pct,color){
     const r=22,c=28,full=Math.PI*r,off=full-(full*pct/100);
@@ -1277,20 +1298,44 @@ function renderDash(){
   }
 
   // Total tickets primero
-  const totalEl=document.getElementById('dash-total'); if(totalEl)totalEl.textContent=inP.length+' ticket'+(inP.length!==1?'s':'');
+  const totalEl=document.getElementById('dash-total'); if(totalEl)totalEl.textContent=totalReal+' ticket'+(totalReal!==1?'s':'');
+
+  // Desglose por mes para cada KPI
+  function mkDesglose(tickets, filterFn){
+    const byM={};
+    tickets.filter(filterFn).forEach(t=>{
+      const d=new Date(t.ts); const k=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()];
+      byM[k]=(byM[k]||0)+1;
+    });
+    const arr=Object.entries(byM).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    if(arr.length<=1)return'';
+    return'<div style="border-top:0.5px solid rgba(0,0,0,.08);margin-top:6px;padding-top:5px;display:flex;flex-direction:column;gap:2px">'+arr.map(([l,n])=>'<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:var(--g500)">'+l+'</span><span style="font-weight:700">'+n+'</span></div>').join('')+'</div>';
+  }
+  const desgloseAb=mkDesglose(window._tickets,t=>t.estado==='Abierto');
+  const desglosePr=mkDesglose(window._tickets,t=>t.estado==='En Proceso');
+  const desgloseCe=mkDesglose(inP,t=>t.estado==='Cerrado');
 
   document.getElementById('kpi-grid').innerHTML=`
     <div class="kpi kpi-blue" onclick="goToTickets('Abierto')" style="cursor:pointer">
       <div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div>
       <div class="kpi-sub">${pct(ab,total)}% del período</div>
       <div class="kpi-arc">${arc(pct(ab,total),'#1D4ED8')}</div>
-      ${desgloseMeses}
+      ${desgloseAb}
     </div>
-    <div class="kpi kpi-amber" onclick="goToTickets('En Proceso')" style="cursor:pointer"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-sub">${pct(pr,total)}% del período</div><div class="kpi-arc">${arc(pct(pr,total),'#D97706')}</div></div>
-    <div class="kpi kpi-green" onclick="goToTickets('Cerrado')" style="cursor:pointer"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div><div class="kpi-sub">${pct(ce,total)}% del período</div><div class="kpi-arc">${arc(pct(ce,total),'#15803D')}</div></div>
-    <div class="kpi kpi-red" onclick="goToTickets('vencido')" style="cursor:pointer"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-sub">${pct(ve,total)}% del total</div><div class="kpi-arc">${arc(pct(ve,total),'#B91C1C')}</div></div>`;
+    <div class="kpi kpi-amber" onclick="goToTickets('En Proceso')" style="cursor:pointer">
+      <div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div>
+      <div class="kpi-sub">${pct(pr,total)}% del período</div>
+      <div class="kpi-arc">${arc(pct(pr,total),'#D97706')}</div>
+      ${desglosePr}
+    </div>
+    <div class="kpi kpi-green" onclick="goToTickets('Cerrado')" style="cursor:pointer">
+      <div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div>
+      <div class="kpi-sub">${pct(ce,total)}% del período</div>
+      <div class="kpi-arc">${arc(pct(ce,total),'#15803D')}</div>
+      ${desgloseCe}
+    </div>`;
 
-  document.getElementById('kpi-grid2').innerHTML='';
+  const g2=document.getElementById('kpi-grid2'); if(g2)g2.innerHTML='';
 
   // Tiempos promedio
   const cerrados=inP.filter(t=>t.estado==='Cerrado'&&t.tsC&&t.ts);
@@ -1843,8 +1888,30 @@ function saveEditTicket(){
 }
 
 // ── REPORTE MENSUAL ───────────────────────────────────────
-function generarReporteMensual(){
-  const [pStart,pEnd]=getPeriodRange(dashPeriod);
+function openReporteModal(){
+  // Poblar lista de meses históricos en el modal
+  const list=document.getElementById('reporte-hist-list'); if(!list)return;
+  const now=new Date();
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mesesConDatos=new Set();
+  (window._tickets||[]).forEach(t=>{
+    const d=new Date(t.ts); const yr=d.getFullYear(); const mo=d.getMonth();
+    if(yr<now.getFullYear()||(yr===now.getFullYear()&&mo<now.getMonth())){
+      mesesConDatos.add(yr+'-'+mo);
+    }
+  });
+  const sorted=[...mesesConDatos].map(k=>{const [y,m]=k.split('-').map(Number);return{y,m};})
+    .sort((a,b)=>b.y===a.y?b.m-a.m:b.y-a.y);
+  list.innerHTML=sorted.map(({y,m})=>`
+    <button class="bs bs-out" style="justify-content:flex-start;gap:10px;width:100%" onclick="closeModal('m-reporte');generarReporteMensual('hist-${y}-${m+1}')">
+      <i class="ti ti-calendar-month" style="color:var(--g400)"></i>${meses[m]} ${y}
+    </button>`).join('');
+  openModal('m-reporte');
+}
+
+function generarReporteMensual(periodo){
+  const p=periodo||dashPeriod;
+  const [pStart,pEnd]=getPeriodRange(p);
   const MESES_L=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const MESES_C=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const DIAS_S=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -2093,6 +2160,34 @@ function renderActividad(){
   renderActChart();
   renderActDay();
   renderPlanHistorial();
+  renderConexiones();
+}
+
+function renderConexiones(){
+  const c=document.getElementById('act-conexiones'); if(!c)return;
+  if(!window._db){c.innerHTML='<p style="font-size:12px;color:var(--g400)">Sin datos</p>';return;}
+  window._onValue(window._ref(window._db,'conexiones'),(snap)=>{
+    if(!snap.exists()){c.innerHTML='<p style="font-size:12px;color:var(--g400)">Sin conexiones registradas</p>';return;}
+    const data=snap.val();
+    const rows=Object.entries(data).sort((a,b)=>b[1].ultimaConexion-a[1].ultimaConexion);
+    const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    c.innerHTML=rows.map(([key,v])=>{
+      const d=new Date(v.ultimaConexion);
+      const label=DIAS[d.getDay()]+' '+d.getDate()+' '+MESES[d.getMonth()]+' · '+d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+      const hace=elapsed(v.ultimaConexion);
+      return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--g100)">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--red-light);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ti-user" style="font-size:15px;color:var(--red)"></i>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--g900)">${v.nombre||key}</div>
+          <div style="font-size:11px;color:var(--g500)">${label}</div>
+        </div>
+        <span style="font-size:11px;color:var(--g400)">hace ${hace}</span>
+      </div>`;
+    }).join('');
+  },{onlyOnce:true});
 }
 
 function buildActHistSelector(){
@@ -2302,6 +2397,7 @@ function generarPlan(){
   const plan={
     id:'plan-'+Date.now(),
     fecha:Date.now(),
+    creadoPor:window._CU,
     tickets:tickets.map(t=>({key:t._key||t.id,id:t.id,est:t.est,cat:t.cat,sub:t.sub,urg:t.urg,desc:t.desc})),
     total:tickets.length,
     cerrados:0
@@ -2365,7 +2461,20 @@ function generarPDF(plan){
   </body></html>`;
 
   const w=window.open('','_blank');
-  if(w){ w.document.write(html); w.document.close(); setTimeout(()=>w.print(),500); }
+  if(w){
+    w.document.write(html);
+    w.document.close();
+    setTimeout(()=>{
+      // Agregar botones de acción al PDF
+      const div=w.document.createElement('div');
+      div.style.cssText='position:fixed;bottom:20px;right:20px;display:flex;gap:10px;z-index:1000';
+      div.innerHTML=`
+        <button onclick="window.print()" style="padding:10px 20px;background:#B91C1C;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:sans-serif">
+          🖨️ Imprimir
+        </button>`;
+      w.document.body.appendChild(div);
+    },400);
+  }
 }
 
 function renderPlanHistorial(){
@@ -2412,9 +2521,18 @@ function _renderPlanHistorialUI(){
       <div style="display:flex;gap:8px">
         <button class="bs bs-out" style="flex:1;font-size:12px" onclick="generarPDF(${JSON.stringify(plan).replace(/"/g,'&quot;')})"><i class="ti ti-download"></i>PDF</button>
         <button class="bs bs-out" style="flex:1;font-size:12px" onclick="verDetallePlan('${plan.id}')"><i class="ti ti-list"></i>Ver detalle</button>
+        ${(isMgr()||plan.creadoPor===window._CU)?`<button class="bs" style="flex:1;font-size:12px;background:var(--red-light);color:var(--red-dark);border:none" onclick="eliminarPlan('${plan.id}')"><i class="ti ti-trash"></i>Eliminar</button>`:''}
       </div>
     </div>`;
   }).join('');
+}
+
+function eliminarPlan(planId){
+  if(!confirm('¿Eliminar este plan de trabajo?'))return;
+  planesGuardados=planesGuardados.filter(p=>p.id!==planId);
+  if(window._db) window._set(window._ref(window._db,'planes/'+planId),null);
+  _renderPlanHistorialUI();
+  showToast('Plan eliminado');
 }
 
 function verDetallePlan(planId){
