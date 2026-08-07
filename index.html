@@ -322,7 +322,7 @@ textarea{resize:none;min-height:80px}
         <div><div class="sh-title">Dashboard</div><div class="sh-sub" id="dash-date"></div></div>
         <div style="display:flex;gap:8px">
           <button class="bs bs-out" style="padding:7px 10px" onclick="renderDash()"><i class="ti ti-refresh"></i></button>
-          <button class="bs bs-red" id="btn-reporte" style="display:none;padding:7px 12px;font-size:12px" onclick="generarReporteMensual()"><i class="ti ti-file-type-pdf"></i>Reporte</button>
+          <button class="bs bs-red" id="btn-reporte" style="display:none;padding:7px 12px;font-size:12px" onclick="generarReporteMensual()"><i class="ti ti-file-type-pdf"></i>Reporte del período</button>
         </div>
       </div>
       <div class="period-row">
@@ -450,7 +450,7 @@ textarea{resize:none;min-height:80px}
     <div class="view" id="v-actividad">
       <div class="sh">
         <div><div class="sh-title">Actividad</div><div class="sh-sub" id="act-period-label"></div></div>
-        <button class="bs bs-red" onclick="openNuevoPlan()"><i class="ti ti-plus"></i>Nuevo plan</button>
+        <button class="bs bs-red" onclick="openNuevoPlan(true)"><i class="ti ti-plus"></i>Nuevo plan</button>
       </div>
 
       <!-- Selector de mes -->
@@ -625,11 +625,28 @@ textarea{resize:none;min-height:80px}
 <div class="overlay" id="m-nuevo-plan" onclick="closeModal('m-nuevo-plan')">
   <div class="modal" onclick="event.stopPropagation()" style="max-height:95vh">
     <div class="modal-handle"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <p class="modal-title" style="margin-bottom:0">Nuevo plan de trabajo</p>
       <span style="font-size:13px;font-weight:600;color:var(--red)" id="plan-count-label">0 seleccionados</span>
     </div>
-    <p style="font-size:12px;color:var(--g500);margin-bottom:12px">Selecciona los tickets que vas a trabajar hoy</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <select id="plan-est-filter" onchange="openNuevoPlan(false)" style="flex:1;padding:7px 10px;border:1px solid var(--g300);border-radius:var(--rs);font-size:12px">
+        <option value="todas">Todas las estaciones</option>
+        <option value="Estadio">Estadio</option><option value="Petrolera">Petrolera</option>
+        <option value="San Germán">San Germán</option><option value="Valiente">Valiente</option>
+        <option value="Corsario">Corsario</option><option value="Loma Linda">Loma Linda</option>
+        <option value="MG">MG</option><option value="San Carlos">San Carlos</option>
+        <option value="Batuecas">Batuecas</option><option value="Arcaza">Arcaza</option>
+        <option value="Miramar">Miramar</option>
+      </select>
+      <select id="plan-urg-filter" onchange="openNuevoPlan(false)" style="flex:1;padding:7px 10px;border:1px solid var(--g300);border-radius:var(--rs);font-size:12px">
+        <option value="todas">Todas las urgencias</option>
+        <option value="Alta">🔴 Alta</option>
+        <option value="Media">🟡 Media</option>
+        <option value="Baja">🟢 Baja</option>
+      </select>
+    </div>
+    <p style="font-size:12px;color:var(--g500);margin-bottom:10px" id="plan-count-total"></p>
     <div id="plan-ticket-list" style="max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>
     <button class="btn-main" onclick="generarPlan()"><i class="ti ti-file-type-pdf"></i>Generar plan PDF</button>
   </div>
@@ -703,7 +720,7 @@ onValue(ref(db,'tickets'),(snap)=>{
       return {...v,estado,_key:k};
     });
   } else { window._tickets=[]; }
-  if(window._CU) _refreshCurrentView();
+  if(window._CU){ _refreshCurrentView(); buildHistSelector(); }
 });
 </script>
 
@@ -776,6 +793,8 @@ let activeFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
 let pendingFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
 let nsUrgSel=''; let addSubCatId=''; let passUserKey='';
 let donutOpen=false;
+let estChartOpen=false;
+let fallasChartOpen=false;
 let donutChart=null;
 let efectivaOpen=false;
 function toggleEfectivaChart(){
@@ -938,13 +957,25 @@ function buildHistSelector(){
   const sel=document.getElementById('period-hist'); if(!sel)return;
   const now=new Date();
   const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  // Solo meses que tienen tickets Y que ya terminaron (no el mes actual)
+  const mesesConDatos=new Set();
+  (window._tickets||[]).forEach(t=>{
+    const d=new Date(t.ts);
+    const yr=d.getFullYear(); const mo=d.getMonth();
+    // Solo incluir si el mes ya terminó
+    if(yr<now.getFullYear()||(yr===now.getFullYear()&&mo<now.getMonth())){
+      mesesConDatos.add(yr+'-'+mo);
+    }
+  });
+  // Ordenar de más reciente a más antiguo
+  const sorted=[...mesesConDatos].map(k=>{const [y,m]=k.split('-').map(Number);return{y,m};})
+    .sort((a,b)=>b.y===a.y?b.m-a.m:b.y-a.y);
   let html='<option value="">Mes anterior...</option>';
-  // Generar últimos 24 meses
-  for(let i=1;i<=24;i++){
-    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    const val='hist-'+d.getFullYear()+'-'+(d.getMonth()+1);
-    html+=`<option value="${val}">${meses[d.getMonth()]} ${d.getFullYear()}</option>`;
-  }
+  sorted.forEach(({y,m})=>{
+    const val='hist-'+y+'-'+(m+1);
+    html+=`<option value="${val}">${meses[m]} ${y}</option>`;
+  });
+  if(!sorted.length) html='<option value="">Sin meses anteriores</option>';
   sel.innerHTML=html;
 }
 
@@ -1267,7 +1298,7 @@ function renderDash(){
       <div style="font-size:10px;color:var(--red);margin-top:2px;text-decoration:${abiertosAct.length?'underline':'none'}">${masAntiguoId}</div>
     </div>
     <div style="flex:1;padding:10px;text-align:center${isDir?';border-right:1px solid var(--g200)':''}"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Total período</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${inP.length}</div><div style="font-size:10px;color:var(--g400);margin-top:2px">tickets este período</div></div>
-    ${isDir?`<div style="flex:1;padding:10px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Efectividad</div><div style="font-size:18px;font-weight:800;color:var(--green)">${efectividad}%</div><div style="font-size:10px;color:var(--g400);margin-top:2px">${cerradosATiempo} de ${totalPeriodo} a tiempo</div></div>`:''}`;
+    ${isDir?`<div style="flex:1;padding:10px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Efectividad</div><div style="font-size:18px;font-weight:800;color:var(--green)">${efectividad}%</div><div style="font-size:10px;color:var(--g400);margin-top:2px">${cerradosTotal} de ${totalPeriodo} cerrados</div></div>`:''}`;
 
   window._dashData={ab,pr,ce,ve,total:inP.length};
   if(donutOpen) renderDonut();
@@ -1647,7 +1678,12 @@ function renderCfg(){
   document.getElementById('sla-media').value=window._slaMedia||SLA_HRS.Media;
   document.getElementById('sla-baja').value=window._slaBaja||SLA_HRS.Baja;
   const canDel=window._CR==='director';
-  const catsList=Array.isArray(window._cats)?window._cats:Object.values(window._cats||{});
+  // Asegurar que cats sea array válido con subs
+  let catsList=[];
+  if(Array.isArray(window._cats)) catsList=window._cats;
+  else if(window._cats&&typeof window._cats==='object') catsList=Object.values(window._cats);
+  if(!catsList.length) catsList=JSON.parse(JSON.stringify(window._DEFAULT_CATS));
+  catsList=catsList.filter(c=>c&&c.id&&c.name);
   document.getElementById('cfg-list').innerHTML=catsList.map(cat=>`
     <div class="cfg-cat">
       <div class="cfg-cat-hdr" onclick="toggleCfgCat('cs-${cat.id}')">
@@ -2039,12 +2075,21 @@ function buildActHistSelector(){
   const sel=document.getElementById('act-hist'); if(!sel)return;
   const now=new Date();
   const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mesesConDatos=new Set();
+  (window._tickets||[]).forEach(t=>{
+    const d=new Date(t.ts); const yr=d.getFullYear(); const mo=d.getMonth();
+    if(yr<now.getFullYear()||(yr===now.getFullYear()&&mo<now.getMonth())){
+      mesesConDatos.add(yr+'-'+mo);
+    }
+  });
+  const sorted=[...mesesConDatos].map(k=>{const [y,m]=k.split('-').map(Number);return{y,m};})
+    .sort((a,b)=>b.y===a.y?b.m-a.m:b.y-a.y);
   let html='<option value="">Mes anterior...</option>';
-  for(let i=1;i<=24;i++){
-    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    const val='hist-'+d.getFullYear()+'-'+(d.getMonth()+1);
-    html+=`<option value="${val}" ${actPeriod===val?'selected':''}>${meses[d.getMonth()]} ${d.getFullYear()}</option>`;
-  }
+  sorted.forEach(({y,m})=>{
+    const val='hist-'+y+'-'+(m+1);
+    html+=`<option value="${val}" ${actPeriod===val?'selected':''}>${meses[m]} ${y}</option>`;
+  });
+  if(!sorted.length) html='<option value="">Sin meses anteriores</option>';
   sel.innerHTML=html;
 }
 
@@ -2174,23 +2219,39 @@ function renderActDay(){
 }
 
 // ── PLAN DE TRABAJO ───────────────────────────────────────
-function openNuevoPlan(){
-  planSeleccion=new Set();
+function openNuevoPlan(resetSel){
+  if(resetSel===undefined||resetSel) planSeleccion=new Set();
   const activos=window._tickets.filter(t=>t.estado!=='Cerrado')
     .sort((a,b)=>{const o={Alta:0,Media:1,Baja:2};return o[a.urg]-o[b.urg]||a.ts-b.ts;});
+
+  const planEstFilter=document.getElementById('plan-est-filter')?.value||'todas';
+  const planUrgFilter=document.getElementById('plan-urg-filter')?.value||'todas';
+  const activosFiltrados=activos.filter(t=>{
+    if(planEstFilter!=='todas'&&t.est!==planEstFilter) return false;
+    if(planUrgFilter!=='todas'&&t.urg!==planUrgFilter) return false;
+    return true;
+  });
+
+  const totalEl=document.getElementById('plan-count-total');
+  if(totalEl) totalEl.textContent=activosFiltrados.length+' ticket'+(activosFiltrados.length!==1?'s':'')+' con estos filtros';
+
   const list=document.getElementById('plan-ticket-list'); if(!list)return;
-  list.innerHTML=activos.map(t=>`
-    <div id="pti-${t._key||t.id}" style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--g50);border:0.5px solid var(--g200);border-radius:8px;cursor:pointer" onclick="togglePlanTicket('${t._key||t.id}')">
-      <div id="ptc-${t._key||t.id}" style="width:20px;height:20px;border-radius:4px;border:1.5px solid var(--g300);flex-shrink:0;display:flex;align-items:center;justify-content:center"></div>
+  list.innerHTML=activosFiltrados.map(t=>{
+    const sel=planSeleccion.has(t._key||t.id);
+    return `<div id="pti-${t._key||t.id}" style="display:flex;align-items:center;gap:10px;padding:10px;background:${sel?'var(--blue-l)':'var(--g50)'};border:0.5px solid ${sel?'var(--blue)':'var(--g200)'};border-radius:8px;cursor:pointer" onclick="togglePlanTicket('${t._key||t.id}')">
+      <div id="ptc-${t._key||t.id}" style="width:20px;height:20px;border-radius:4px;border:1.5px solid ${sel?'var(--blue)':'var(--g300)'};flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${sel?'var(--blue)':''}">
+        ${sel?'<i class="ti ti-check" style="font-size:12px;color:white"></i>':''}
+      </div>
       <div style="flex:1;min-width:0">
         <div style="font-size:10px;font-weight:700;color:var(--red)">${t.id} · ${t.est}</div>
         <div style="font-size:13px;font-weight:500;color:var(--g900)">${t.sub}</div>
-        <div style="font-size:11px;color:var(--g500)">${t.cat}</div>
+        <div style="font-size:11px;color:var(--g500)">${t.cat} · ${elapsed(t.ts)}</div>
       </div>
       <span class="badge ${t.urg==='Alta'?'b-red':t.urg==='Media'?'b-amber':'b-green'}">${t.urg}</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   updatePlanCount();
-  openModal('m-nuevo-plan');
+  if(resetSel===undefined||resetSel) openModal('m-nuevo-plan');
 }
 
 function togglePlanTicket(key){
