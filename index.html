@@ -320,12 +320,15 @@ textarea{resize:none;min-height:80px}
     <div class="view on" id="v-dash">
       <div class="sh">
         <div><div class="sh-title">Dashboard</div><div class="sh-sub" id="dash-date"></div></div>
-        <button class="bs bs-out" style="padding:7px 10px" onclick="renderDash()"><i class="ti ti-refresh"></i></button>
+        <div style="display:flex;gap:8px">
+          <button class="bs bs-out" style="padding:7px 10px" onclick="renderDash()"><i class="ti ti-refresh"></i></button>
+          <button class="bs bs-red" id="btn-reporte" style="display:none;padding:7px 12px;font-size:12px" onclick="generarReporteMensual()"><i class="ti ti-file-type-pdf"></i>Reporte</button>
+        </div>
       </div>
       <div class="period-row">
         <button class="period-btn on" onclick="setPeriod('mes',this)">Este mes</button>
         <button class="period-btn" onclick="setPeriod('semana',this)">Esta semana</button>
-        <button class="period-btn" onclick="setPeriod('mes-ant',this)">Mes anterior</button>
+        <select id="period-hist" onchange="setPeriodHist(this)" style="padding:5px 10px;border:1px solid var(--g300);border-radius:20px;font-size:12px;font-weight:600;color:var(--g600);background:var(--white);cursor:pointer;-webkit-appearance:none;appearance:none"><option value="">Mes anterior...</option></select>
       </div>
       <div style="font-size:13px;font-weight:600;color:var(--g500);margin-bottom:8px" id="dash-total"></div>
       <div class="kpi-row" id="kpi-grid"></div>
@@ -366,6 +369,13 @@ textarea{resize:none;min-height:80px}
         </div>
         <div id="bar-est" style="display:none"></div>
       </div>
+      <div class="card">
+        <div class="card-title" style="cursor:pointer" onclick="toggleEfectivaChart()">
+          <i class="ti ti-star"></i>Efectividad por estación
+          <i class="ti ti-chevron-down" id="efectiva-chevron" style="margin-left:auto;font-size:14px;color:var(--g400)"></i>
+        </div>
+        <div id="bar-efectiva" style="display:none"></div>
+      </div>
     </div>
 
     <!-- TICKETS -->
@@ -374,13 +384,16 @@ textarea{resize:none;min-height:80px}
         <div><div class="sh-title">Tickets</div><div class="sh-sub" id="tcount"></div></div>
         <button class="bs bs-red" onclick="openModal('m-new')"><i class="ti ti-plus"></i>Nuevo</button>
       </div>
+      <div style="margin-bottom:10px;position:relative">
+        <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--g400);pointer-events:none"></i>
+        <input type="text" id="t-search" placeholder="Buscar por folio, descripción, estación..." oninput="renderTickets()" style="width:100%;padding:9px 12px 9px 34px;border:1px solid var(--g300);border-radius:var(--rs);font-size:13px">
+      </div>
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
         <button class="period-btn on" id="sf-todos" onclick="setStatusFilter('todos',this)">Todos</button>
         <button class="period-btn" id="sf-abierto" onclick="setStatusFilter('Abierto',this)">Abiertos</button>
         <button class="period-btn" id="sf-proceso" onclick="setStatusFilter('En Proceso',this)">En proceso</button>
         <button class="period-btn" id="sf-cerrado" onclick="setStatusFilter('Cerrado',this)">Cerrados</button>
         <button class="period-btn" id="sf-vencido" onclick="setStatusFilter('vencido',this)">🔴 Vencidos</button>
-        <button class="period-btn" id="sf-fuera" onclick="setStatusFilter('fuera',this)">⚠️ Fuera de tiempo</button>
         <button class="filter-btn" id="filter-toggle-btn" onclick="openFilterPanel()"><i class="ti ti-adjustments-horizontal"></i></button>
       </div>
       <div id="tlist"></div>
@@ -433,7 +446,50 @@ textarea{resize:none;min-height:80px}
       <div id="usuarios-list"></div>
     </div>
 
-  </div>
+    <!-- ACTIVIDAD -->
+    <div class="view" id="v-actividad">
+      <div class="sh">
+        <div><div class="sh-title">Actividad</div><div class="sh-sub" id="act-period-label"></div></div>
+        <button class="bs bs-red" onclick="openNuevoPlan()"><i class="ti ti-plus"></i>Nuevo plan</button>
+      </div>
+
+      <!-- Selector de mes -->
+      <div class="period-row" style="margin-bottom:10px">
+        <button class="period-btn on" id="act-mes-btn" onclick="setActPeriod('mes',this)">Este mes</button>
+        <select id="act-hist" onchange="setActPeriodHist(this)" style="padding:5px 10px;border:1px solid var(--g300);border-radius:20px;font-size:12px;font-weight:600;color:var(--g600);background:var(--white);-webkit-appearance:none;appearance:none"><option value="">Mes anterior...</option></select>
+      </div>
+
+      <!-- Gráfica tendencia -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title"><i class="ti ti-chart-line"></i>Tickets pendientes acumulados</div>
+        <div style="position:relative;height:110px">
+          <canvas id="act-chart" role="img" aria-label="Tendencia de tickets pendientes del mes"></canvas>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--g400);margin-top:4px" id="act-chart-labels"></div>
+      </div>
+
+      <!-- Detalle del día -->
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="card-title" style="margin-bottom:0"><i class="ti ti-calendar-event"></i>Actividad del día</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="tb-btn" style="background:var(--g100);color:var(--g700);width:28px;height:28px" onclick="moveActDay(-1)"><i class="ti ti-chevron-left"></i></button>
+            <span style="font-size:13px;font-weight:600;color:var(--g800);min-width:110px;text-align:center" id="act-day-label"></span>
+            <button class="tb-btn" style="background:var(--g100);color:var(--g700);width:28px;height:28px" onclick="moveActDay(1)"><i class="ti ti-chevron-right"></i></button>
+            <button class="period-btn" style="padding:4px 10px;font-size:11px" onclick="setActToday()">Hoy</button>
+          </div>
+        </div>
+        <div id="act-day-content"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px" id="act-day-summary"></div>
+      </div>
+
+      <!-- Historial de planes -->
+      <div class="card-title" style="margin-bottom:8px"><i class="ti ti-list-check" style="color:var(--red)"></i>Historial de planes</div>
+      <div id="plan-historial"></div>
+    </div>
+
+    <!-- MODAL NUEVO PLAN -->
+    </div>
   <nav class="bnav" id="bnav"></nav>
 </div>
 
@@ -563,6 +619,27 @@ textarea{resize:none;min-height:80px}
     <div class="fg"><label>Atendido por</label><input type="text" id="e-atendido"></div>
     <div class="fg"><label>Acción realizada</label><textarea id="e-accion" placeholder="Descripción de lo que se hizo..."></textarea></div>
     <button class="btn-main" onclick="saveEditTicket()"><i class="ti ti-check"></i>Guardar cambios</button>
+  </div>
+</div>
+
+<div class="overlay" id="m-nuevo-plan" onclick="closeModal('m-nuevo-plan')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-height:95vh">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <p class="modal-title" style="margin-bottom:0">Nuevo plan de trabajo</p>
+      <span style="font-size:13px;font-weight:600;color:var(--red)" id="plan-count-label">0 seleccionados</span>
+    </div>
+    <p style="font-size:12px;color:var(--g500);margin-bottom:12px">Selecciona los tickets que vas a trabajar hoy</p>
+    <div id="plan-ticket-list" style="max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>
+    <button class="btn-main" onclick="generarPlan()"><i class="ti ti-file-type-pdf"></i>Generar plan PDF</button>
+  </div>
+</div>
+
+<div class="overlay" id="m-plan-detalle" onclick="closeModal('m-plan-detalle')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-height:95vh">
+    <div class="modal-handle"></div>
+    <p class="modal-title">Detalle del plan</p>
+    <div id="m-plan-detalle-body" style="max-height:70vh;overflow-y:auto"></div>
   </div>
 </div>
 
@@ -700,8 +777,52 @@ let pendingFilters={estado:'todos',urg:'todas',est:'todas',edad:'todas'};
 let nsUrgSel=''; let addSubCatId=''; let passUserKey='';
 let donutOpen=false;
 let donutChart=null;
-let estChartOpen=false;
-let fallasChartOpen=false;
+let efectivaOpen=false;
+function toggleEfectivaChart(){
+  efectivaOpen=!efectivaOpen;
+  const el=document.getElementById('bar-efectiva');
+  const ch=document.getElementById('efectiva-chevron');
+  if(el) el.style.display=efectivaOpen?'block':'none';
+  if(ch) ch.className='ti '+(efectivaOpen?'ti-chevron-up':'ti-chevron-down');
+  if(efectivaOpen) renderEfectivaChart();
+}
+
+function renderEfectivaChart(){
+  const [pStart,pEnd]=getPeriodRange(dashPeriod);
+  const inP=window._tickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
+  const c=document.getElementById('bar-efectiva'); if(!c)return;
+  const rows=ESTACIONES.map(est=>{
+    const tks=inP.filter(t=>t.est===est);
+    if(!tks.length) return null;
+    const ab=tks.length;
+    const ce=tks.filter(t=>t.estado==='Cerrado').length;
+    const pct=Math.round(ce/ab*100);
+    const color=pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+    return{est,ab,ce,pct,color};
+  }).filter(Boolean).sort((a,b)=>b.pct-a.pct);
+
+  if(!rows.length){c.innerHTML='<p style="font-size:12px;color:var(--g400)">Sin datos</p>';return;}
+
+  // Header
+  let html=`<div style="display:grid;grid-template-columns:90px 1fr 44px 44px;gap:6px;align-items:center;font-size:10px;font-weight:700;color:var(--g400);text-transform:uppercase;letter-spacing:.04em;padding-bottom:6px;border-bottom:1px solid var(--g100);margin-bottom:6px">
+    <span>Estación</span><span>Efectividad</span><span style="text-align:center">Abier.</span><span style="text-align:center">Cerr.</span>
+  </div>`;
+
+  html+=rows.map(r=>`
+    <div style="display:grid;grid-template-columns:90px 1fr 44px 44px;gap:6px;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--g100)">
+      <span style="font-size:12px;font-weight:600;color:var(--g800);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.est}</span>
+      <div style="display:flex;align-items:center;gap:7px">
+        <div style="flex:1;height:7px;background:var(--g100);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${r.pct}%;background:${r.color};border-radius:4px"></div>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:${r.color};min-width:34px">${r.pct}%</span>
+      </div>
+      <span style="font-size:12px;font-weight:600;color:var(--blue);text-align:center">${r.ab}</span>
+      <span style="font-size:12px;font-weight:600;color:var(--green);text-align:center">${r.ce}</span>
+    </div>`).join('');
+
+  c.innerHTML=html;
+}
 function toggleDonut(){
   donutOpen=!donutOpen;
   const body=document.getElementById('donut-body');
@@ -748,9 +869,44 @@ function toggleFallasChart(){
 function renderFallasChart(){
   const [pStart,pEnd]=getPeriodRange(dashPeriod);
   const inP=window._tickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
-  const tipos={};inP.forEach(t=>{tipos[t.cat]=(tipos[t.cat]||0)+1;});
+  // Count by category and subcategory
+  const tipos={};
+  const subs={};
+  inP.forEach(t=>{
+    tipos[t.cat]=(tipos[t.cat]||0)+1;
+    if(!subs[t.cat]) subs[t.cat]={};
+    subs[t.cat][t.sub]=(subs[t.cat][t.sub]||0)+1;
+  });
   const mx2=Math.max(...Object.values(tipos),1);
-  document.getElementById('bar-tipos').innerHTML=Object.entries(tipos).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([tipo,cnt])=>`<div class="br"><span class="bl">${tipo}</span><div class="bt"><div class="bf" style="width:${Math.round(cnt/mx2*100)}%"></div></div><span class="bn">${cnt}</span></div>`).join('') || '<p style="font-size:12px;color:var(--g400)">Sin datos</p>';
+  const html=Object.entries(tipos).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([cat,cnt],i)=>{
+    const catId='fcat-'+i;
+    const subEntries=Object.entries(subs[cat]||{}).sort((a,b)=>b[1]-a[1]);
+    const subHtml=subEntries.map(([sub,scnt])=>`
+      <div class="br" style="margin-left:12px;margin-top:4px">
+        <span class="bl" style="font-size:11px;color:var(--g500);width:82px">${sub.length>22?sub.substring(0,22)+'…':sub}</span>
+        <div class="bt" style="height:6px"><div class="bf" style="width:${Math.round(scnt/cnt*100)}%;background:var(--g400)"></div></div>
+        <span class="bn" style="font-size:11px;color:var(--g500)">${scnt}</span>
+      </div>`).join('');
+    return`<div>
+      <div class="br" style="cursor:pointer" onclick="toggleFallaSub('${catId}')">
+        <span class="bl">${cat}</span>
+        <div class="bt"><div class="bf" style="width:${Math.round(cnt/mx2*100)}%"></div></div>
+        <span class="bn">${cnt}</span>
+        <i class="ti ti-chevron-down" id="${catId}-ch" style="font-size:13px;color:var(--g400);margin-left:4px"></i>
+      </div>
+      <div id="${catId}" style="display:none">${subHtml}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('bar-tipos').innerHTML=html||'<p style="font-size:12px;color:var(--g400)">Sin datos</p>';
+}
+
+function toggleFallaSub(id){
+  const el=document.getElementById(id);
+  const ch=document.getElementById(id+'-ch');
+  if(!el)return;
+  const open=el.style.display==='none';
+  el.style.display=open?'block':'none';
+  if(ch) ch.className='ti '+(open?'ti-chevron-up':'ti-chevron-down');
 }
 
 // ── HELPERS ───────────────────────────────────────────────
@@ -770,10 +926,34 @@ function getPeriodRange(period){
     const sun=new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
     return [mon.getTime(),sun.getTime()];
   }
-  if(period==='mes-ant'){
-    return [new Date(now.getFullYear(),now.getMonth()-1,1).getTime(), new Date(now.getFullYear(),now.getMonth(),0,23,59,59,999).getTime()];
+  // Mes histórico formato 'hist-YYYY-M'
+  if(period&&period.startsWith('hist-')){
+    const parts=period.split('-'); const yr=parseInt(parts[1]); const mo=parseInt(parts[2])-1;
+    return [new Date(yr,mo,1).getTime(), new Date(yr,mo+1,0,23,59,59,999).getTime()];
   }
   return [new Date(now.getFullYear(),now.getMonth(),1).getTime(), new Date(now.getFullYear(),now.getMonth()+1,0,23,59,59,999).getTime()];
+}
+
+function buildHistSelector(){
+  const sel=document.getElementById('period-hist'); if(!sel)return;
+  const now=new Date();
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  let html='<option value="">Mes anterior...</option>';
+  // Generar últimos 24 meses
+  for(let i=1;i<=24;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const val='hist-'+d.getFullYear()+'-'+(d.getMonth()+1);
+    html+=`<option value="${val}">${meses[d.getMonth()]} ${d.getFullYear()}</option>`;
+  }
+  sel.innerHTML=html;
+}
+
+function setPeriodHist(sel){
+  if(!sel.value)return;
+  // Quitar .on de los botones de periodo
+  document.querySelectorAll('#v-dash .period-row .period-btn').forEach(b=>b.classList.remove('on'));
+  dashPeriod=sel.value;
+  renderDash();
 }
 
 function getSLA(t){
@@ -791,6 +971,13 @@ function getSLA(t){
 function isVencido(t){ return t.estado!=='Cerrado'&&getSLA(t).status==='over'; }
 function fmtHrs(ms){ if(!ms||ms<=0)return'—'; const h=ms/3600000; if(h<1)return Math.round(h*60)+'min'; if(h<24)return h.toFixed(1)+'h'; const d=Math.floor(h/24); const hr=Math.round(h%24); return hr>0?d+'d '+hr+'h':d+'d'; }
 function elapsed(ts){ const m=Math.round((Date.now()-ts)/60000); if(m<60)return m+'m'; if(m<1440)return Math.round(m/60)+'h'; return Math.round(m/1440)+'d'; }
+function elapsedWithDate(ts){
+  const rel=elapsed(ts);
+  const d=new Date(ts);
+  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const fecha=d.getDate()+' '+meses[d.getMonth()];
+  return rel+' · '+fecha;
+}
 function fmtDate(ts){ if(!ts)return''; return new Date(ts).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
 function pct(n,t){ return t>0?Math.round(n/t*100):0; }
 function getCat(id){ return(window._cats||[]).find(c=>c.id===id); }
@@ -901,8 +1088,11 @@ function startApp(){
   document.getElementById('tb-user').textContent=name;
   document.getElementById('sb-user').textContent=name;
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
-  populateSelects(); buildNav();
+  populateSelects(); buildNav(); buildHistSelector();
   window._appReady=true;
+  // Mostrar botón de reporte solo para director
+  const btnRep=document.getElementById('btn-reporte');
+  if(btnRep) btnRep.style.display=window._CR==='director'?'flex':'none';
   if(window._CR==='est'){showView('tickets');renderTickets();}
   else{showView('dash');renderDash();}
   // Build estacion chips for filter panel
@@ -912,13 +1102,13 @@ function startApp(){
 
 function buildNav(){
   const cr=window._CR;
-  // Base nav para todos
   let items=[
     {i:'ti-layout-dashboard',l:'Dashboard',v:'dash'},
     {i:'ti-ticket',l:'Tickets',v:'tickets'},
     {i:'ti-circle-plus',l:'Levantar ticket',v:'rep'},
   ];
   if(isMgr()){
+    items.push({i:'ti-chart-line',l:'Actividad',v:'actividad'});
     items.push({i:'ti-settings',l:'Config',v:'cfg'});
     items.push({i:'ti-users-group',l:'Usuarios',v:'usuarios'});
   }
@@ -937,6 +1127,7 @@ function navTo(v,el){
   if(v==='tickets')renderTickets();
   if(v==='cfg')renderCfg();
   if(v==='usuarios')renderUsuarios();
+  if(v==='actividad')renderActividad();
 }
 
 function showView(v){
@@ -1016,9 +1207,22 @@ function renderDash(){
 
   const cv=inP.filter(t=>t.cerradoVencido===true).length;
   const cerradosTotal=inP.filter(t=>t.estado==='Cerrado').length;
-  const cerradosATiempo=cerradosTotal-cv;
-  const totalPeriodo=inP.length||1;
-  const efectividad=Math.round(cerradosATiempo/totalPeriodo*100);
+  const abiertosTotal=inP.length||1;
+  const efectividad=Math.round(cerradosTotal/abiertosTotal*100);
+  const cerradosATiempo=cerradosTotal; // simplificado: todos los cerrados cuentan
+  const totalPeriodo=abiertosTotal;
+
+  // Desglose de abiertos por mes
+  const abiertosTickets=window._tickets.filter(t=>t.estado!=='Cerrado');
+  const mesByMonth={};
+  abiertosTickets.forEach(t=>{
+    const d=new Date(t.ts); const key=d.getFullYear()+'-'+(d.getMonth()+1);
+    const label=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()];
+    if(!mesByMonth[key]) mesByMonth[key]={label,yr:d.getFullYear(),mo:d.getMonth(),cnt:0};
+    mesByMonth[key].cnt++;
+  });
+  const desgloseArr=Object.values(mesByMonth).sort((a,b)=>b.yr===a.yr?b.mo-a.mo:b.yr-a.yr).slice(0,3);
+  const desgloseMeses=desgloseArr.length>1?('<div style="border-top:0.5px solid rgba(29,78,216,.2);margin-top:6px;padding-top:5px;display:flex;flex-direction:column;gap:2px">'+desgloseArr.map(function(m){return'<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:var(--g500)">'+m.label+'</span><span style="font-weight:700;color:var(--blue)">'+m.cnt+'</span></div>';}).join('')+'</div>'):'';
 
   function arc(pct,color){
     const r=22,c=28,full=Math.PI*r,off=full-(full*pct/100);
@@ -1033,13 +1237,17 @@ function renderDash(){
   const totalEl=document.getElementById('dash-total'); if(totalEl)totalEl.textContent=inP.length+' ticket'+(inP.length!==1?'s':'');
 
   document.getElementById('kpi-grid').innerHTML=`
-    <div class="kpi kpi-blue" onclick="goToTickets('Abierto')" style="cursor:pointer"><div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div><div class="kpi-sub">${pct(ab,total)}% del período</div><div class="kpi-arc">${arc(pct(ab,total),'#1D4ED8')}</div></div>
+    <div class="kpi kpi-blue" onclick="goToTickets('Abierto')" style="cursor:pointer">
+      <div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div>
+      <div class="kpi-sub">${pct(ab,total)}% del período</div>
+      <div class="kpi-arc">${arc(pct(ab,total),'#1D4ED8')}</div>
+      ${desgloseMeses}
+    </div>
     <div class="kpi kpi-amber" onclick="goToTickets('En Proceso')" style="cursor:pointer"><div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div><div class="kpi-sub">${pct(pr,total)}% del período</div><div class="kpi-arc">${arc(pct(pr,total),'#D97706')}</div></div>
     <div class="kpi kpi-green" onclick="goToTickets('Cerrado')" style="cursor:pointer"><div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div><div class="kpi-sub">${pct(ce,total)}% del período</div><div class="kpi-arc">${arc(pct(ce,total),'#15803D')}</div></div>
     <div class="kpi kpi-red" onclick="goToTickets('vencido')" style="cursor:pointer"><div class="kpi-lbl">Vencidos</div><div class="kpi-val">${ve}</div><div class="kpi-sub">${pct(ve,total)}% del total</div><div class="kpi-arc">${arc(pct(ve,total),'#B91C1C')}</div></div>`;
 
-  document.getElementById('kpi-grid2').innerHTML=`
-    <div class="kpi kpi-red" style="grid-column:span 1"><div class="kpi-lbl">Cerrados fuera de tiempo</div><div class="kpi-val">${cv}</div><div class="kpi-sub">${cerradosTotal>0?pct(cv,cerradosTotal):0}% de los cerrados</div></div>`;
+  document.getElementById('kpi-grid2').innerHTML='';
 
   // Tiempos promedio
   const cerrados=inP.filter(t=>t.estado==='Cerrado'&&t.tsC&&t.ts);
@@ -1053,7 +1261,11 @@ function renderDash(){
 
   document.getElementById('dash-avgs').innerHTML=`
     <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Promedio de resolución</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${avgC}</div><div style="font-size:10px;color:var(--g400);margin-top:2px">${cerrados.length} ticket${cerrados.length!==1?'s':''} cerrado${cerrados.length!==1?'s':''}</div></div>
-    <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200)"><div style="font-size:9px;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:3px">Ticket más antiguo</div><div style="font-size:18px;font-weight:800;color:var(--red)">${masAntiguo}</div><div style="font-size:10px;color:var(--g400);margin-top:2px">${masAntiguoId}</div></div>
+    <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--g200);cursor:${abiertosAct.length?'pointer':'default'}" onclick="${abiertosAct.length?`openTicket('${abiertosAct[0]._key||abiertosAct[0].id}')`:''}">
+      <div style="font-size:9px;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:3px">Ticket más antiguo</div>
+      <div style="font-size:18px;font-weight:800;color:var(--red)">${masAntiguo}</div>
+      <div style="font-size:10px;color:var(--red);margin-top:2px;text-decoration:${abiertosAct.length?'underline':'none'}">${masAntiguoId}</div>
+    </div>
     <div style="flex:1;padding:10px;text-align:center${isDir?';border-right:1px solid var(--g200)':''}"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Total período</div><div style="font-size:18px;font-weight:800;color:var(--g900)">${inP.length}</div><div style="font-size:10px;color:var(--g400);margin-top:2px">tickets este período</div></div>
     ${isDir?`<div style="flex:1;padding:10px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Efectividad</div><div style="font-size:18px;font-weight:800;color:var(--green)">${efectividad}%</div><div style="font-size:10px;color:var(--g400);margin-top:2px">${cerradosATiempo} de ${totalPeriodo} a tiempo</div></div>`:''}`;
 
@@ -1061,6 +1273,7 @@ function renderDash(){
   if(donutOpen) renderDonut();
   if(estChartOpen) renderEstChart();
   if(fallasChartOpen) renderFallasChart();
+  if(efectivaOpen) renderEfectivaChart();
   updateBadge();
 }
 
@@ -1108,9 +1321,11 @@ function hasActiveFilters(){
 }
 
 function renderTickets(){
+  const searchQ=(document.getElementById('t-search')?.value||'').toLowerCase().trim();
   let base=[...window._tickets];
   if(window._CR==='sup'){const z=SUP_ZONES[window._CU]||[];base=base.filter(t=>z.includes(t.est));}
   let list=applyFiltersToList(base);
+  if(searchQ) list=list.filter(t=>(t.id||'').toLowerCase().includes(searchQ)||(t.desc||'').toLowerCase().includes(searchQ)||(t.est||'').toLowerCase().includes(searchQ)||(t.cat||'').toLowerCase().includes(searchQ)||(t.sub||'').toLowerCase().includes(searchQ));
 
   // Update filter button appearance
   const btn=document.getElementById('filter-toggle-btn');
@@ -1128,6 +1343,11 @@ function renderTickets(){
   ESTACIONES.forEach(e=>{byEst[e]=[];});
   list.forEach(t=>{ if(byEst[t.est]) byEst[t.est].push(t); });
 
+  const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const MESES_C=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  function dayKey(ts){ const d=new Date(ts); d.setHours(0,0,0,0); return d.getTime(); }
+  function dayLabel(ts){ const d=new Date(ts); const hoy=new Date(); hoy.setHours(0,0,0,0); const ayer=new Date(hoy);ayer.setDate(hoy.getDate()-1); if(d.getTime()===hoy.getTime())return'Hoy — '+DIAS[d.getDay()]+' '+d.getDate()+' '+MESES_C[d.getMonth()]; if(d.getTime()===ayer.getTime())return'Ayer — '+DIAS[d.getDay()]+' '+d.getDate()+' '+MESES_C[d.getMonth()]; return DIAS[d.getDay()]+' '+d.getDate()+' '+MESES_C[d.getMonth()]; }
+
   c.innerHTML=ESTACIONES.filter(e=>byEst[e].length>0).map(est=>{
     const tks=byEst[est];
     const ab=tks.filter(t=>t.estado==='Abierto').length;
@@ -1141,8 +1361,18 @@ function renderTickets(){
       ce?`<span class="est-pill pill-green">Cerrados ${ce} · ${pct(ce,total)}%</span>`:'',
       ve?`<span class="est-pill pill-red">🔴 Vencidos ${ve}</span>`:'',
     ].filter(Boolean).join('');
-    const cards=tks.map(t=>ticketCard(t)).join('');
-    return`<div class="est-group"><div class="est-header"><span class="est-name"><i class="ti ti-building-store" style="font-size:13px;margin-right:5px;color:var(--g400)"></i>${est}</span><div class="est-pills">${pills}</div></div><div class="est-body">${cards}</div></div>`;
+    // Agrupar por día dentro de la estación (más recientes arriba)
+    const byDay={};
+    tks.forEach(t=>{ const dk=dayKey(t.ts); if(!byDay[dk])byDay[dk]=[]; byDay[dk].push(t); });
+    const daysSorted=Object.keys(byDay).map(Number).sort((a,b)=>b-a);
+    const dayGroups=daysSorted.map(dk=>`
+      <div style="padding:6px 10px 2px;display:flex;align-items:center;gap:5px">
+        <i class="ti ti-calendar-event" style="font-size:11px;color:var(--g400)"></i>
+        <span style="font-size:11px;font-weight:600;color:var(--g500)">${dayLabel(dk)}</span>
+      </div>
+      <div style="padding:0 8px 6px">${byDay[dk].map(t=>ticketCard(t)).join('')}</div>
+    `).join('');
+    return`<div class="est-group"><div class="est-header"><span class="est-name"><i class="ti ti-building-store" style="font-size:13px;margin-right:5px;color:var(--g400)"></i>${est}</span><div class="est-pills">${pills}</div></div>${dayGroups}</div>`;
   }).join('');
 }
 
@@ -1153,7 +1383,6 @@ function ticketCard(t){
   const folioColor=venc?'#B91C1C':t.estado==='En Proceso'?'#D97706':t.estado==='Cerrado'?'#15803D':'#1D4ED8';
   const cerradoStyle=t.estado==='Cerrado'?'opacity:.82':'';
   const atendidoBadge=t.atendidoPor?`<span class="badge b-gray"><i class="ti ti-tool" style="font-size:10px"></i> ${shortName(t.atendidoPor)}</span>`:'';
-  const vencidoBadge=t.cerradoVencido?`<span class="badge b-red">⚠️ Cerrado fuera de tiempo</span>`:'';
   let statusLine='';
   if(venc){
     const diasFuera=Math.floor((Date.now()-t.ts-(SLA_HRS[t.urg]||24)*3600000)/86400000);
@@ -1170,11 +1399,11 @@ function ticketCard(t){
     <div class="tc-body">
       <div class="tc-top">
         <span class="tc-folio" style="color:${folioColor}">${t.id} · ${t.cat}</span>
-        <span class="tc-time">${elapsed(t.ts)} · ${t.urg}</span>
+        <span class="tc-time">${elapsedWithDate(t.ts)} · ${t.urg}</span>
       </div>
       <div class="tc-cat">${t.sub}</div>
       <div class="tc-desc">${t.desc}</div>
-      <div class="tc-bottom">${statusLine}<div style="display:flex;gap:5px">${atendidoBadge}${vencidoBadge}</div></div>
+      <div class="tc-bottom">${statusLine}<div style="display:flex;gap:5px">${atendidoBadge}</div></div>
     </div>
   </div>`;
 }
@@ -1327,7 +1556,7 @@ function closeTicket(key){
   if(!t?.fotoCierre){showToast('Agrega foto de evidencia');return;}
   const vencido=isVencido(t);
   fbUpd(key,{accion,atendidoPor:quien,estado:'Cerrado',tsC:Date.now(),cerradoVencido:vencido});
-  closeModal('m-detail'); showToast(vencido?'⚠️ Ticket cerrado fuera de tiempo':'✅ Ticket cerrado');
+  closeModal('m-detail'); showToast('✅ Ticket cerrado');
 }
 
 function prevClosePhoto(key){
@@ -1418,7 +1647,8 @@ function renderCfg(){
   document.getElementById('sla-media').value=window._slaMedia||SLA_HRS.Media;
   document.getElementById('sla-baja').value=window._slaBaja||SLA_HRS.Baja;
   const canDel=window._CR==='director';
-  document.getElementById('cfg-list').innerHTML=(window._cats||[]).map(cat=>`
+  const catsList=Array.isArray(window._cats)?window._cats:Object.values(window._cats||{});
+  document.getElementById('cfg-list').innerHTML=catsList.map(cat=>`
     <div class="cfg-cat">
       <div class="cfg-cat-hdr" onclick="toggleCfgCat('cs-${cat.id}')">
         <span class="cfg-cat-name">${cat.name}</span>
@@ -1440,9 +1670,9 @@ function renderCfg(){
     </div>`).join('');
 }
 function toggleCfgCat(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none';}
-function toggleCatActive(catId){const c=(window._cats||[]).find(x=>x.id===catId);if(!c)return;c.active=!c.active;fbSet('cats',window._cats);renderCfg();populateSelects();showToast(c.active?'Activada':'Desactivada');}
-function toggleSubActive(catId,subId){const c=(window._cats||[]).find(x=>x.id===catId);const s=c?.subs.find(x=>x.id===subId);if(!s)return;s.active=!s.active;fbSet('cats',window._cats);renderCfg();populateSelects();showToast(s.active?'Activada':'Desactivada');}
-function deleteSub(catId,subId){const c=(window._cats||[]).find(x=>x.id===catId);if(!c)return;c.subs=c.subs.filter(s=>s.id!==subId);fbSet('cats',window._cats);renderCfg();populateSelects();showToast('Eliminada');}
+function toggleCatActive(catId){const cats=Array.isArray(window._cats)?window._cats:Object.values(window._cats||{});const c=cats.find(x=>x.id===catId);if(!c)return;c.active=!c.active;fbSet('cats',window._cats);renderCfg();populateSelects();showToast(c.active?'Activada':'Desactivada');}
+function toggleSubActive(catId,subId){const cats=Array.isArray(window._cats)?window._cats:Object.values(window._cats||{});const c=cats.find(x=>x.id===catId);const s=c?.subs.find(x=>x.id===subId);if(!s)return;s.active=!s.active;fbSet('cats',window._cats);renderCfg();populateSelects();showToast(s.active?'Activada':'Desactivada');}
+function deleteSub(catId,subId){const cats=Array.isArray(window._cats)?window._cats:Object.values(window._cats||{});const c=cats.find(x=>x.id===catId);if(!c)return;c.subs=c.subs.filter(s=>s.id!==subId);fbSet('cats',window._cats);renderCfg();populateSelects();showToast('Eliminada');}
 function openAddCat(){document.getElementById('nc-name').value='';openModal('m-addcat');}
 function saveNewCat(){const name=document.getElementById('nc-name').value.trim();if(!name){showToast('Escribe un nombre');return;}(window._cats||[]).push({id:'c'+Date.now(),name,active:true,subs:[]});fbSet('cats',window._cats);closeModal('m-addcat');renderCfg();populateSelects();showToast('Categoría "'+name+'" creada');}
 function openAddSub(catId,catName){addSubCatId=catId;nsUrgSel='';document.getElementById('ns-name').value='';document.getElementById('addsub-catname').textContent=catName;['alta','media','baja'].forEach(u=>{const b=document.getElementById('nsu-'+u);if(b)b.className='ub';});openModal('m-addsub');}
@@ -1550,6 +1780,577 @@ function saveEditTicket(){
   fbUpd(editKey,updates);
   closeModal('m-edit');
   showToast('✅ Ticket actualizado');
+}
+
+// ── REPORTE MENSUAL ───────────────────────────────────────
+function generarReporteMensual(){
+  const [pStart,pEnd]=getPeriodRange(dashPeriod);
+  const MESES_L=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const MESES_C=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const DIAS_S=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const pDate=new Date(pStart);
+  const mesLabel=MESES_L[pDate.getMonth()]+' '+pDate.getFullYear();
+  const daysInMonth=new Date(pDate.getFullYear(),pDate.getMonth()+1,0).getDate();
+
+  // ── Datos base ──
+  const todosTickets=window._tickets;
+  // Cerrados en este período (independientemente de cuándo se abrieron)
+  const cerradosEnPeriodo=todosTickets.filter(t=>t.tsC&&t.tsC>=pStart&&t.tsC<=pEnd);
+  // Abiertos al inicio del período (tickets que existían antes o durante)
+  const activosAlInicio=todosTickets.filter(t=>t.ts<=pEnd);
+  const totalActivos=activosAlInicio.length||1;
+  const totalCerrados=cerradosEnPeriodo.length;
+  const efectividadGlobal=Math.round(totalCerrados/totalActivos*100);
+  // Pendientes al cierre
+  const pendientesAlCierre=todosTickets.filter(t=>t.estado!=='Cerrado');
+  // Abiertos creados en el período
+  const abiertosPeriodo=todosTickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
+  // Promedio resolución
+  const avgMs=cerradosEnPeriodo.length?cerradosEnPeriodo.reduce((s,t)=>s+(t.tsC-t.ts),0)/cerradosEnPeriodo.length:0;
+  const avgLabel=fmtHrs(avgMs);
+
+  // Desglose cerrados por mes de apertura
+  const cerradosByMes={};
+  cerradosEnPeriodo.forEach(t=>{
+    const d=new Date(t.ts); const key=MESES_C[d.getMonth()]+' '+d.getFullYear();
+    cerradosByMes[key]=(cerradosByMes[key]||0)+1;
+  });
+  const desgloseStr=Object.entries(cerradosByMes).map(([k,v])=>`<span style="margin-right:12px;color:#6B7280;font-size:11px">${k}: <strong>${v}</strong></span>`).join('');
+
+  // ── Fallas por categoría y subcategoría ──
+  const catCount={};const subCount={};
+  abiertosPeriodo.forEach(t=>{
+    catCount[t.cat]=(catCount[t.cat]||0)+1;
+    const sk=t.cat+'||'+t.sub; subCount[sk]=(subCount[sk]||0)+1;
+  });
+  const catsSorted=Object.entries(catCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxCat=catsSorted[0]?.[1]||1;
+
+  // ── Efectividad por estación ──
+  const estRows=ESTACIONES.map(est=>{
+    const tks=activosAlInicio.filter(t=>t.est===est); if(!tks.length)return null;
+    const ce=cerradosEnPeriodo.filter(t=>t.est===est).length;
+    const pct=Math.round(ce/tks.length*100);
+    const color=pct>=80?'#15803D':pct>=50?'#D97706':'#B91C1C';
+    return{est,total:tks.length,ce,pct,color};
+  }).filter(Boolean).sort((a,b)=>b.pct-a.pct);
+
+  // ── Actividad diaria ──
+  const dailyRows=[];
+  for(let d=1;d<=daysInMonth;d++){
+    const dStart=new Date(pDate.getFullYear(),pDate.getMonth(),d,0,0,0,0).getTime();
+    const dEnd=dStart+86399999;
+    const ab=todosTickets.filter(t=>t.ts>=dStart&&t.ts<=dEnd).length;
+    const ce=cerradosEnPeriodo.filter(t=>t.tsC&&t.tsC>=dStart&&t.tsC<=dEnd).length;
+    const dayDate=new Date(dStart);
+    if(ab>0||ce>0) dailyRows.push({d,dia:DIAS_S[dayDate.getDay()],ab,ce});
+  }
+
+  // ── Construir HTML del reporte ──
+  const pg1=`
+  <div class="page">
+    <div class="header">
+      <div>
+        <div class="brand">Flecha Gasolineras</div>
+        <div class="title">Reporte Mensual de Mantenimiento</div>
+        <div class="subtitle">${mesLabel} · Departamento de Mantenimiento Correctivo</div>
+      </div>
+      <div class="eff-badge">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:2px">EFECTIVIDAD</div>
+        <div style="font-size:30px;font-weight:800;line-height:1">${efectividadGlobal}%</div>
+        <div style="font-size:10px;opacity:.85">${totalCerrados} de ${totalActivos} tickets</div>
+      </div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-box" style="border-top-color:#1D4ED8">
+        <div class="kpi-val" style="color:#1D4ED8">${abiertosPeriodo.length}</div>
+        <div class="kpi-lbl">Tickets abiertos</div>
+      </div>
+      <div class="kpi-box" style="border-top-color:#15803D">
+        <div class="kpi-val" style="color:#15803D">${totalCerrados}</div>
+        <div class="kpi-lbl">Tickets cerrados</div>
+        ${desgloseStr?`<div style="margin-top:4px">${desgloseStr}</div>`:''}
+      </div>
+      <div class="kpi-box" style="border-top-color:#B91C1C">
+        <div class="kpi-val" style="color:#B91C1C">${pendientesAlCierre.length}</div>
+        <div class="kpi-lbl">Pendientes al cierre</div>
+      </div>
+      <div class="kpi-box" style="border-top-color:#D97706">
+        <div class="kpi-val" style="color:#D97706">${avgLabel}</div>
+        <div class="kpi-lbl">Prom. resolución</div>
+      </div>
+    </div>
+    <div class="section-title">Resumen ejecutivo</div>
+    <div class="summary-box">
+      El departamento recibió <strong>${abiertosPeriodo.length} tickets nuevos</strong> durante ${mesLabel} y cerró <strong>${totalCerrados} tickets</strong> en total
+      (incluyendo pendientes de meses anteriores), logrando una efectividad del <strong>${efectividadGlobal}%</strong>.
+      El tiempo promedio de resolución fue de <strong>${avgLabel}</strong>.
+      Al cierre del mes quedan <strong>${pendientesAlCierre.length} tickets pendientes</strong> para el siguiente período.
+    </div>
+    <div class="footer">Flecha Gasolineras · ${mesLabel} · Página 1 de 3 · Generado el ${new Date().toLocaleString('es-MX')}</div>
+  </div>`;
+
+  const pg2=`
+  <div class="page">
+    <div class="page-header"><span class="brand-sm">Flecha Gasolineras · ${mesLabel}</span></div>
+    <div class="section-title" style="margin-bottom:14px">Efectividad por estación</div>
+    <div class="table-header" style="grid-template-columns:100px 1fr 50px 50px">
+      <span>Estación</span><span>Efectividad</span><span style="text-align:center">Abier.</span><span style="text-align:center">Cerr.</span>
+    </div>
+    ${estRows.map(r=>`
+    <div class="table-row" style="grid-template-columns:100px 1fr 50px 50px">
+      <span class="est-name">${r.est}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="bar-track"><div class="bar-fill" style="width:${r.pct}%;background:${r.color}"></div></div>
+        <span style="font-size:12px;font-weight:700;color:${r.color};min-width:34px">${r.pct}%</span>
+      </div>
+      <span style="font-size:13px;font-weight:600;color:#1D4ED8;text-align:center">${r.total}</span>
+      <span style="font-size:13px;font-weight:600;color:#15803D;text-align:center">${r.ce}</span>
+    </div>`).join('')}
+
+    <div class="section-title" style="margin-top:24px;margin-bottom:14px">Fallas más frecuentes</div>
+    ${catsSorted.map(([cat,cnt])=>{
+      const subsOfCat=Object.entries(subCount).filter(([k])=>k.startsWith(cat+'||')).sort((a,b)=>b[1]-a[1]).slice(0,4);
+      return`<div class="cat-block">
+        <div class="cat-header">
+          <span style="font-size:13px;font-weight:700;color:#111827">${cat}</span>
+          <span style="font-size:12px;font-weight:700;color:#B91C1C">${cnt} tickets</span>
+        </div>
+        ${subsOfCat.map(([k,v])=>{const sub=k.split('||')[1];return`
+        <div class="sub-row">
+          <span class="sub-name">${sub.length>40?sub.substring(0,40)+'…':sub}</span>
+          <div class="bar-track" style="max-width:120px"><div class="bar-fill" style="width:${Math.round(v/cnt*100)}%;background:#9CA3AF"></div></div>
+          <span style="font-size:12px;font-weight:600;color:#374151;min-width:16px;text-align:right">${v}</span>
+        </div>`}).join('')}
+      </div>`;
+    }).join('')}
+    <div class="footer">Flecha Gasolineras · ${mesLabel} · Página 2 de 3 · Generado el ${new Date().toLocaleString('es-MX')}</div>
+  </div>`;
+
+  const pg3=`
+  <div class="page">
+    <div class="page-header"><span class="brand-sm">Flecha Gasolineras · ${mesLabel}</span></div>
+    <div class="section-title" style="margin-bottom:14px">Actividad diaria</div>
+    <div class="table-header" style="grid-template-columns:90px 50px 50px 1fr">
+      <span>Fecha</span><span style="text-align:center">Nuevos</span><span style="text-align:center">Cerrados</span><span></span>
+    </div>
+    ${dailyRows.map(r=>`
+    <div class="table-row" style="grid-template-columns:90px 50px 50px 1fr">
+      <span class="est-name">${r.dia} ${r.d} ${MESES_C[pDate.getMonth()]}</span>
+      <span style="font-size:12px;font-weight:600;color:#1D4ED8;text-align:center">${r.ab||'—'}</span>
+      <span style="font-size:12px;font-weight:600;color:#15803D;text-align:center">${r.ce||'—'}</span>
+      <div style="display:flex;gap:3px;align-items:center">
+        ${r.ab?`<div style="height:8px;width:${Math.round(r.ab/(Math.max(...dailyRows.map(x=>x.ab+x.ce))||1)*60)}px;background:#DBEAFE;border-radius:2px"></div>`:''}
+        ${r.ce?`<div style="height:8px;width:${Math.round(r.ce/(Math.max(...dailyRows.map(x=>x.ab+x.ce))||1)*60)}px;background:#DCFCE7;border-radius:2px"></div>`:''}
+      </div>
+    </div>`).join('')}
+
+    <div class="section-title" style="margin-top:20px;margin-bottom:10px">Tickets pendientes al cierre del mes</div>
+    ${pendientesAlCierre.slice(0,10).map(t=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid #E5E7EB;border-radius:6px;border-left:3px solid #B91C1C;margin-bottom:5px">
+      <span style="font-size:11px;font-weight:700;color:#B91C1C;min-width:50px">${t.id}</span>
+      <span style="font-size:12px;color:#374151;flex:1">${t.est} · ${t.cat}</span>
+      <span style="font-size:11px;font-weight:700;color:#B91C1C">${elapsed(t.ts)}</span>
+    </div>`).join('')}
+    ${pendientesAlCierre.length>10?`<p style="font-size:11px;color:#9CA3AF;text-align:center;margin-top:6px">+${pendientesAlCierre.length-10} tickets más...</p>`:''}
+
+    <div style="margin-top:28px;padding-top:14px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;align-items:flex-end">
+      <div style="font-size:10px;color:#9CA3AF">Flecha Gasolineras · ${mesLabel} · Página 3 de 3<br>Generado el ${new Date().toLocaleString('es-MX')}</div>
+      <div style="display:flex;gap:32px">
+        <div style="text-align:center"><div style="width:90px;border-bottom:1px solid #374151;height:24px;margin-bottom:4px"></div><div style="font-size:9px;color:#9CA3AF">Director General</div></div>
+        <div style="text-align:center"><div style="width:90px;border-bottom:1px solid #374151;height:24px;margin-bottom:4px"></div><div style="font-size:9px;color:#9CA3AF">Jefe de Mantenimiento</div></div>
+      </div>
+    </div>
+  </div>`;
+
+  const css=`
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111827;background:white}
+  .page{max-width:720px;margin:0 auto;padding:36px 40px;page-break-after:always}
+  .page:last-child{page-break-after:auto}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #B91C1C}
+  .brand{font-size:10px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+  .brand-sm{font-size:10px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.08em}
+  .title{font-size:22px;font-weight:700;color:#111827;margin-bottom:2px}
+  .subtitle{font-size:13px;color:#6B7280}
+  .eff-badge{background:#B91C1C;color:white;padding:10px 16px;border-radius:8px;text-align:center;flex-shrink:0}
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+  .kpi-box{border:1px solid #E5E7EB;border-radius:8px;padding:12px;border-top:3px solid #E5E7EB}
+  .kpi-val{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
+  .kpi-lbl{font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em}
+  .section-title{font-size:14px;font-weight:700;color:#111827;border-bottom:1px solid #E5E7EB;padding-bottom:8px;margin-bottom:12px;margin-top:8px}
+  .summary-box{background:#F9FAFB;border-left:3px solid #B91C1C;padding:12px 14px;font-size:13px;color:#374151;line-height:1.7;border-radius:0 6px 6px 0}
+  .table-header{display:grid;gap:8px;font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;padding:6px 0;border-bottom:2px solid #E5E7EB;margin-bottom:4px}
+  .table-row{display:grid;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #F9FAFB}
+  .est-name{font-size:12px;font-weight:600;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar-track{flex:1;height:8px;background:#F3F4F6;border-radius:4px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:4px}
+  .cat-block{border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;margin-bottom:10px}
+  .cat-header{display:flex;justify-content:space-between;padding:9px 14px;background:#F9FAFB}
+  .sub-row{display:flex;align-items:center;gap:10px;padding:7px 14px;border-top:1px solid #F3F4F6}
+  .sub-name{font-size:12px;color:#374151;flex:1}
+  .page-header{margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid #E5E7EB}
+  .footer{margin-top:24px;padding-top:10px;border-top:1px solid #F3F4F6;font-size:10px;color:#9CA3AF;text-align:center}
+  @media print{.page{padding:20px 24px}@page{margin:1cm}}`;
+
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte ${mesLabel}</title><style>${css}</style></head><body>${pg1}${pg2}${pg3}</body></html>`;
+  const w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),600);}
+}
+let actPeriod='mes';
+let actDay=new Date(); actDay.setHours(0,0,0,0);
+let actChart=null;
+let planSeleccion=new Set();
+let planesGuardados=[];
+
+function setActPeriod(p,el){
+  actPeriod=p;
+  document.querySelectorAll('#v-actividad .period-btn').forEach(b=>b.classList.remove('on'));
+  if(el)el.classList.add('on');
+  const sel=document.getElementById('act-hist'); if(sel)sel.value='';
+  renderActividad();
+}
+
+function setActPeriodHist(sel){
+  if(!sel.value)return;
+  actPeriod=sel.value;
+  document.querySelectorAll('#v-actividad .period-btn').forEach(b=>b.classList.remove('on'));
+  renderActividad();
+}
+
+function moveActDay(d){
+  actDay=new Date(actDay.getTime()+d*86400000);
+  renderActDay();
+}
+
+function setActToday(){
+  actDay=new Date(); actDay.setHours(0,0,0,0);
+  renderActDay();
+}
+
+function renderActividad(){
+  buildActHistSelector();
+  renderActChart();
+  renderActDay();
+  renderPlanHistorial();
+}
+
+function buildActHistSelector(){
+  const sel=document.getElementById('act-hist'); if(!sel)return;
+  const now=new Date();
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  let html='<option value="">Mes anterior...</option>';
+  for(let i=1;i<=24;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const val='hist-'+d.getFullYear()+'-'+(d.getMonth()+1);
+    html+=`<option value="${val}" ${actPeriod===val?'selected':''}>${meses[d.getMonth()]} ${d.getFullYear()}</option>`;
+  }
+  sel.innerHTML=html;
+}
+
+function getActRange(){
+  const now=new Date();
+  if(actPeriod&&actPeriod.startsWith('hist-')){
+    const parts=actPeriod.split('-'); const yr=parseInt(parts[1]); const mo=parseInt(parts[2])-1;
+    return [new Date(yr,mo,1).getTime(), new Date(yr,mo+1,0,23,59,59,999).getTime(), yr, mo];
+  }
+  return [new Date(now.getFullYear(),now.getMonth(),1).getTime(), new Date(now.getFullYear(),now.getMonth()+1,0,23,59,59,999).getTime(), now.getFullYear(), now.getMonth()];
+}
+
+function renderActChart(){
+  const [pStart,pEnd,yr,mo]=getActRange();
+  const daysInMonth=new Date(yr,mo+1,0).getDate();
+  const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Calculate pending tickets per day
+  const data=[];
+  for(let d=1;d<=daysInMonth;d++){
+    const dayEnd=new Date(yr,mo,d,23,59,59,999).getTime();
+    const dayStart=new Date(yr,mo,d,0,0,0,0).getTime();
+    // Tickets that were open at end of this day
+    const pending=window._tickets.filter(t=>{
+      if(t.ts>dayEnd) return false; // not created yet
+      if(t.estado==='Cerrado'&&t.tsC&&t.tsC<dayStart) return false; // already closed
+      return true;
+    }).length;
+    data.push(pending);
+  }
+
+  const labels=Array.from({length:daysInMonth},(_,i)=>i+1);
+  const labelsEl=document.getElementById('act-chart-labels');
+  if(labelsEl){
+    const step=Math.ceil(daysInMonth/5);
+    labelsEl.innerHTML=labels.filter((_,i)=>i===0||i===daysInMonth-1||(i+1)%step===0).map(d=>`<span>${d} ${MESES[mo]}</span>`).join('');
+  }
+
+  const canvas=document.getElementById('act-chart'); if(!canvas)return;
+  if(actChart){actChart.destroy();actChart=null;}
+  if(typeof Chart==='undefined')return;
+  actChart=new Chart(canvas,{
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        data,
+        borderColor:'#B91C1C',
+        borderWidth:2.5,
+        pointRadius:data.map((_,i)=>i===data.length-1?5:2),
+        pointBackgroundColor:'#B91C1C',
+        tension:0.3,
+        fill:true,
+        backgroundColor:'rgba(185,28,28,0.07)'
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>`Día ${ctx[0].label} ${MESES[mo]}`,label:ctx=>ctx.parsed.y+' pendientes'}}},
+      scales:{
+        x:{display:true,ticks:{color:'#9CA3AF',font:{size:10},maxTicksLimit:6},grid:{display:false},border:{display:false}},
+        y:{display:true,min:0,ticks:{color:'#9CA3AF',font:{size:10},stepSize:Math.ceil(Math.max(...data)/4)||1},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}
+      }
+    }
+  });
+}
+
+function renderActDay(){
+  const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const ayer=new Date(hoy); ayer.setDate(hoy.getDate()-1);
+  let label='';
+  if(actDay.getTime()===hoy.getTime()) label='Hoy — '+DIAS[actDay.getDay()]+' '+actDay.getDate()+' '+MESES[actDay.getMonth()];
+  else if(actDay.getTime()===ayer.getTime()) label='Ayer — '+DIAS[actDay.getDay()]+' '+actDay.getDate()+' '+MESES[actDay.getMonth()];
+  else label=DIAS[actDay.getDay()]+' '+actDay.getDate()+' '+MESES[actDay.getMonth()]+' '+actDay.getFullYear();
+  const lEl=document.getElementById('act-day-label'); if(lEl)lEl.textContent=label;
+
+  const dayStart=actDay.getTime();
+  const dayEnd=dayStart+86399999;
+
+  const cerradosHoy=window._tickets.filter(t=>t.tsC&&t.tsC>=dayStart&&t.tsC<=dayEnd);
+  const enProcesoHoy=window._tickets.filter(t=>t.tsI&&t.tsI>=dayStart&&t.tsI<=dayEnd&&t.estado!=='Cerrado');
+
+  const c=document.getElementById('act-day-content'); if(!c)return;
+  let html='';
+  if(cerradosHoy.length){
+    html+=`<div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px"><i class="ti ti-circle-check" style="color:var(--green);margin-right:4px"></i>Cerrados — ${cerradosHoy.length}</div>`;
+    html+=cerradosHoy.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;background:var(--g50);border-radius:8px;border:0.5px solid var(--g200);margin-bottom:5px;cursor:pointer" onclick="openTicket('${t._key||t.id}')">
+      <div style="width:3px;min-height:40px;border-radius:2px;background:var(--green);flex-shrink:0;align-self:stretch"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;font-weight:700;color:var(--green)">${t.id} · ${t.cat}</div>
+        <div style="font-size:13px;font-weight:500;color:var(--g900)">${t.sub}</div>
+        <div style="font-size:11px;color:var(--g500)">${t.est} · ${fmtHrs(t.tsC-t.ts)} de resolución</div>
+      </div>
+      <i class="ti ti-circle-check" style="font-size:18px;color:var(--green);flex-shrink:0"></i>
+    </div>`).join('');
+  }
+  if(enProcesoHoy.length){
+    html+=`<div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px"><i class="ti ti-clock" style="color:var(--amber);margin-right:4px"></i>Pasados a pendiente — ${enProcesoHoy.length}</div>`;
+    html+=enProcesoHoy.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;background:var(--g50);border-radius:8px;border:0.5px solid var(--g200);margin-bottom:5px;cursor:pointer" onclick="openTicket('${t._key||t.id}')">
+      <div style="width:3px;min-height:40px;border-radius:2px;background:var(--amber);flex-shrink:0;align-self:stretch"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;font-weight:700;color:var(--amber-d)">${t.id} · ${t.cat}</div>
+        <div style="font-size:13px;font-weight:500;color:var(--g900)">${t.sub}</div>
+        <div style="font-size:11px;color:var(--g500)">${t.est} · Abierto hace ${elapsed(t.ts)}</div>
+      </div>
+      <i class="ti ti-clock" style="font-size:18px;color:var(--amber);flex-shrink:0"></i>
+    </div>`).join('');
+  }
+  if(!cerradosHoy.length&&!enProcesoHoy.length){
+    html='<div class="empty" style="padding:24px"><i class="ti ti-moon"></i><p>Sin actividad este día</p></div>';
+  }
+  c.innerHTML=html;
+
+  const s=document.getElementById('act-day-summary'); if(!s)return;
+  s.innerHTML=`
+    <div style="background:var(--g50);border:0.5px solid var(--g200);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:22px;font-weight:700;color:var(--green)">${cerradosHoy.length}</div>
+      <div style="font-size:11px;color:var(--g500)">cerrados</div>
+    </div>
+    <div style="background:var(--g50);border:0.5px solid var(--g200);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:22px;font-weight:700;color:var(--amber)">${enProcesoHoy.length}</div>
+      <div style="font-size:11px;color:var(--g500)">en pendiente</div>
+    </div>`;
+}
+
+// ── PLAN DE TRABAJO ───────────────────────────────────────
+function openNuevoPlan(){
+  planSeleccion=new Set();
+  const activos=window._tickets.filter(t=>t.estado!=='Cerrado')
+    .sort((a,b)=>{const o={Alta:0,Media:1,Baja:2};return o[a.urg]-o[b.urg]||a.ts-b.ts;});
+  const list=document.getElementById('plan-ticket-list'); if(!list)return;
+  list.innerHTML=activos.map(t=>`
+    <div id="pti-${t._key||t.id}" style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--g50);border:0.5px solid var(--g200);border-radius:8px;cursor:pointer" onclick="togglePlanTicket('${t._key||t.id}')">
+      <div id="ptc-${t._key||t.id}" style="width:20px;height:20px;border-radius:4px;border:1.5px solid var(--g300);flex-shrink:0;display:flex;align-items:center;justify-content:center"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;font-weight:700;color:var(--red)">${t.id} · ${t.est}</div>
+        <div style="font-size:13px;font-weight:500;color:var(--g900)">${t.sub}</div>
+        <div style="font-size:11px;color:var(--g500)">${t.cat}</div>
+      </div>
+      <span class="badge ${t.urg==='Alta'?'b-red':t.urg==='Media'?'b-amber':'b-green'}">${t.urg}</span>
+    </div>`).join('');
+  updatePlanCount();
+  openModal('m-nuevo-plan');
+}
+
+function togglePlanTicket(key){
+  if(planSeleccion.has(key)){
+    planSeleccion.delete(key);
+    const el=document.getElementById('pti-'+key); if(el){el.style.background='var(--g50)';el.style.borderColor='var(--g200)';}
+    const ch=document.getElementById('ptc-'+key); if(ch){ch.style.background='';ch.style.borderColor='var(--g300)';ch.innerHTML='';}
+  } else {
+    planSeleccion.add(key);
+    const el=document.getElementById('pti-'+key); if(el){el.style.background='var(--blue-l)';el.style.borderColor='var(--blue)';}
+    const ch=document.getElementById('ptc-'+key); if(ch){ch.style.background='var(--blue)';ch.style.borderColor='var(--blue)';ch.innerHTML='<i class="ti ti-check" style="font-size:12px;color:white"></i>';}
+  }
+  updatePlanCount();
+}
+
+function updatePlanCount(){
+  const el=document.getElementById('plan-count-label');
+  if(el) el.textContent=planSeleccion.size+' seleccionado'+(planSeleccion.size!==1?'s':'');
+}
+
+function generarPlan(){
+  if(planSeleccion.size===0){showToast('Selecciona al menos un ticket');return;}
+  const tickets=window._tickets.filter(t=>planSeleccion.has(t._key||t.id));
+  const plan={
+    id:'plan-'+Date.now(),
+    fecha:Date.now(),
+    tickets:tickets.map(t=>({key:t._key||t.id,id:t.id,est:t.est,cat:t.cat,sub:t.sub,urg:t.urg,desc:t.desc})),
+    total:tickets.length,
+    cerrados:0
+  };
+  // Guardar en Firebase
+  if(window._db) window._set(window._ref(window._db,'planes/'+plan.id),plan);
+  planesGuardados.unshift(plan);
+  closeModal('m-nuevo-plan');
+  generarPDF(plan);
+  renderPlanHistorial();
+  showToast('✅ Plan generado');
+}
+
+function generarPDF(plan){
+  const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const fecha=new Date(plan.fecha);
+  const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const fechaStr=DIAS[fecha.getDay()]+' '+fecha.getDate()+' de '+MESES[fecha.getMonth()]+' de '+fecha.getFullYear();
+  const ticketsHTML=plan.tickets.map((t,i)=>`
+    <div style="padding:14px 0;border-bottom:1px solid #F3F4F6">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="width:20px;height:20px;border:1.5px solid #374151;border-radius:3px;flex-shrink:0;margin-top:2px"></div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:11px;font-weight:700;color:#B91C1C">${t.id}</span>
+            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:${t.urg==='Alta'?'#fee2e2;color:#991b1b':t.urg==='Media'?'#fef3c7;color:#92400e':'#dcfce7;color:#14532d'}">${t.urg}</span>
+            <span style="font-size:11px;color:#6B7280">${t.est}</span>
+          </div>
+          <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:2px">${t.cat} — ${t.sub}</div>
+          <div style="font-size:12px;color:#6B7280;margin-bottom:8px">${t.desc||''}</div>
+          <div style="border-top:1px dashed #E5E7EB;padding-top:6px">
+            <div style="font-size:10px;color:#9CA3AF;margin-bottom:4px">NOTAS / OBSERVACIONES</div>
+            <div style="height:22px;border-bottom:1px solid #E5E7EB"></div>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Plan de trabajo — ${fechaStr}</title>
+  <style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111827;max-width:700px;margin:0 auto;padding:32px}@media print{body{padding:20px}}</style>
+  </head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #B91C1C">
+    <div>
+      <div style="font-size:10px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Flecha Gasolineras</div>
+      <div style="font-size:22px;font-weight:700;color:#111827">Plan de trabajo</div>
+      <div style="font-size:13px;color:#6B7280;margin-top:2px">${fechaStr} · Mantenimiento Correctivo</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:#6B7280">Total de tickets</div>
+      <div style="font-size:28px;font-weight:700;color:#B91C1C">${plan.total}</div>
+    </div>
+  </div>
+  ${ticketsHTML}
+  <div style="margin-top:24px;padding-top:14px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:10px;color:#9CA3AF">Generado por Flecha Mantenimiento · ${fecha.toLocaleString('es-MX')}</div>
+    <div style="display:flex;gap:28px">
+      <div style="text-align:center"><div style="width:80px;border-bottom:1px solid #374151;height:22px;margin-bottom:4px"></div><div style="font-size:9px;color:#9CA3AF">Firma técnico</div></div>
+      <div style="text-align:center"><div style="width:80px;border-bottom:1px solid #374151;height:22px;margin-bottom:4px"></div><div style="font-size:9px;color:#9CA3AF">Firma supervisión</div></div>
+    </div>
+  </div>
+  </body></html>`;
+
+  const w=window.open('','_blank');
+  if(w){ w.document.write(html); w.document.close(); setTimeout(()=>w.print(),500); }
+}
+
+function renderPlanHistorial(){
+  // Load from Firebase
+  if(window._db&&window._onValue){
+    window._onValue(window._ref(window._db,'planes'),(snap)=>{
+      if(snap.exists()){
+        const data=snap.val();
+        planesGuardados=Object.values(data).sort((a,b)=>b.fecha-a.fecha);
+      } else { planesGuardados=[]; }
+      _renderPlanHistorialUI();
+    },{onlyOnce:true});
+  } else { _renderPlanHistorialUI(); }
+}
+
+function _renderPlanHistorialUI(){
+  const c=document.getElementById('plan-historial'); if(!c)return;
+  if(!planesGuardados.length){
+    c.innerHTML='<div class="empty"><i class="ti ti-list-check"></i><p>Sin planes generados aún</p></div>';
+    return;
+  }
+  const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  c.innerHTML=planesGuardados.map(plan=>{
+    // Count how many plan tickets are now closed
+    const cerrados=plan.tickets.filter(t=>{ const tt=window._tickets.find(x=>(x._key||x.id)===t.key); return tt&&tt.estado==='Cerrado'; }).length;
+    const pct=plan.total>0?Math.round(cerrados/plan.total*100):0;
+    const d=new Date(plan.fecha);
+    const fechaLabel=DIAS[d.getDay()]+' '+d.getDate()+' '+MESES[d.getMonth()];
+    return`<div class="card" style="margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--g900)">${fechaLabel}</div>
+          <div style="font-size:11px;color:var(--g500)">${plan.total} ticket${plan.total!==1?'s':''} planeados</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:20px;font-weight:700;color:${pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)'}">${pct}%</div>
+          <div style="font-size:10px;color:var(--g500)">${cerrados} de ${plan.total} cerrados</div>
+        </div>
+      </div>
+      <div style="height:6px;background:var(--g100);border-radius:3px;overflow:hidden;margin-bottom:10px">
+        <div style="height:100%;width:${pct}%;background:${pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)'};border-radius:3px;transition:width .3s"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="bs bs-out" style="flex:1;font-size:12px" onclick="generarPDF(${JSON.stringify(plan).replace(/"/g,'&quot;')})"><i class="ti ti-download"></i>PDF</button>
+        <button class="bs bs-out" style="flex:1;font-size:12px" onclick="verDetallePlan('${plan.id}')"><i class="ti ti-list"></i>Ver detalle</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function verDetallePlan(planId){
+  const plan=planesGuardados.find(p=>p.id===planId); if(!plan)return;
+  const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const d=new Date(plan.fecha);
+  const body=document.getElementById('m-plan-detalle-body'); if(!body)return;
+  body.innerHTML=`<p style="font-size:12px;color:var(--g500);margin-bottom:12px">${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} · ${plan.total} tickets</p>`+
+    plan.tickets.map(t=>{
+      const tt=window._tickets.find(x=>(x._key||x.id)===t.key);
+      const cerrado=tt&&tt.estado==='Cerrado';
+      return`<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:${cerrado?'var(--green-l)':'var(--g50)'};border-radius:8px;border:0.5px solid ${cerrado?'var(--green)':'var(--g200)'};margin-bottom:6px;cursor:pointer" onclick="closeModal('m-plan-detalle');openTicket('${t.key}')">
+        <i class="ti ${cerrado?'ti-circle-check':'ti-circle'}" style="font-size:18px;color:${cerrado?'var(--green)':'var(--g300)'}"></i>
+        <div style="flex:1">
+          <div style="font-size:10px;font-weight:700;color:${cerrado?'var(--green)':'var(--red)'}">${t.id} · ${t.est}</div>
+          <div style="font-size:13px;font-weight:500">${t.sub}</div>
+        </div>
+      </div>`;
+    }).join('');
+  openModal('m-plan-detalle');
 }
 
 // ── MODAL / TOAST ─────────────────────────────────────────
