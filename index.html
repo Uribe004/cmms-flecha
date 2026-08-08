@@ -59,7 +59,7 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--red);box
 .view.on{display:block}
 
 /* KPI */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .kpi{background:var(--white);border:1px solid var(--g200);border-radius:var(--r);padding:12px 14px;position:relative;overflow:hidden;cursor:pointer}
 .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
 .kpi-red::before{background:var(--red)}
@@ -269,7 +269,7 @@ textarea{resize:none;min-height:80px}
   .content{flex:1;overflow-y:auto;padding-bottom:0}
   .bnav{display:none}
   .view{padding:24px 28px 24px}
-  .kpi-row{grid-template-columns:repeat(4,1fr)}
+  .kpi-row{grid-template-columns:repeat(3,1fr)}
 }
 @media(max-width:767px){.sidebar{display:none}}
 </style>
@@ -443,6 +443,16 @@ textarea{resize:none;min-height:80px}
         <button class="bs bs-red" onclick="openModal('m-addtec')"><i class="ti ti-plus"></i>Técnico</button>
       </div>
       <div id="usuarios-list"></div>
+    </div>
+
+    <!-- REPORTE -->
+    <div class="view" id="v-reporte" style="padding:0">
+      <div style="background:var(--red);color:white;padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10">
+        <button onclick="navTo('dash',null)" style="background:rgba(255,255,255,.2);border:none;color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px"><i class="ti ti-arrow-left"></i></button>
+        <span style="font-weight:700;font-size:15px" id="rep-view-title">Reporte</span>
+        <button id="rep-download-btn" onclick="descargarReportePDF()" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;color:white;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px"><i class="ti ti-download"></i>Descargar PDF</button>
+      </div>
+      <div id="rep-view-body" style="padding:16px"></div>
     </div>
 
     <!-- ACTIVIDAD -->
@@ -681,6 +691,7 @@ textarea{resize:none;min-height:80px}
 
 <div class="toast" id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <!-- FIREBASE -->
 <script type="module">
@@ -1272,18 +1283,15 @@ function renderEstChart(){
 function renderDash(){
   const [pStart,pEnd]=getPeriodRange(dashPeriod);
   const inP=window._tickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
-  const totalReal=ab+pr+ce;
-  const total=totalReal||1;
   const ab=inP.filter(t=>t.estado==='Abierto').length;
   const pr=inP.filter(t=>t.estado==='En Proceso').length;
   const ce=inP.filter(t=>t.estado==='Cerrado').length;
-
-  const cv=inP.filter(t=>t.cerradoVencido===true).length;
-  const cerradosTotal=inP.filter(t=>t.estado==='Cerrado').length;
-  const abiertosTotal=inP.length||1;
-  const efectividad=Math.round(cerradosTotal/abiertosTotal*100);
-  const cerradosATiempo=cerradosTotal; // simplificado: todos los cerrados cuentan
-  const totalPeriodo=abiertosTotal;
+  const totalReal=ab+pr+ce;
+  const total=totalReal||1;
+  const efectividad=Math.round(ce/total*100);
+  const cerradosTotal=ce;
+  const cerradosATiempo=ce;
+  const totalPeriodo=total;
 
 
 
@@ -1919,19 +1927,21 @@ function generarReporteMensual(periodo){
   const mesLabel=MESES_L[pDate.getMonth()]+' '+pDate.getFullYear();
   const daysInMonth=new Date(pDate.getFullYear(),pDate.getMonth()+1,0).getDate();
 
-  // ── Datos base ──
+  // ── Datos base — consistente con dashboard ──
   const todosTickets=window._tickets;
-  // Cerrados en este período (independientemente de cuándo se abrieron)
+  // Tickets del período (creados en este período)
+  const abiertosPeriodo=todosTickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
+  // Cerrados en este período
   const cerradosEnPeriodo=todosTickets.filter(t=>t.tsC&&t.tsC>=pStart&&t.tsC<=pEnd);
-  // Abiertos al inicio del período (tickets que existían antes o durante)
-  const activosAlInicio=todosTickets.filter(t=>t.ts<=pEnd);
-  const totalActivos=activosAlInicio.length||1;
-  const totalCerrados=cerradosEnPeriodo.length;
-  const efectividadGlobal=Math.round(totalCerrados/totalActivos*100);
+  // Estados actuales del período
+  const abRep=abiertosPeriodo.filter(t=>t.estado==='Abierto').length;
+  const prRep=abiertosPeriodo.filter(t=>t.estado==='En Proceso').length;
+  const ceRep=cerradosEnPeriodo.length;
+  const totalActivos=abRep+prRep+ceRep||1;
+  const totalCerrados=ceRep;
+  const efectividadGlobal=Math.round(ceRep/totalActivos*100);
   // Pendientes al cierre
   const pendientesAlCierre=todosTickets.filter(t=>t.estado!=='Cerrado');
-  // Abiertos creados en el período
-  const abiertosPeriodo=todosTickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
   // Promedio resolución
   const avgMs=cerradosEnPeriodo.length?cerradosEnPeriodo.reduce((s,t)=>s+(t.tsC-t.ts),0)/cerradosEnPeriodo.length:0;
   const avgLabel=fmtHrs(avgMs);
@@ -2009,7 +2019,7 @@ function generarReporteMensual(periodo){
     </div>
     <div class="section-title">Resumen ejecutivo</div>
     <div class="summary-box">
-      El departamento recibió <strong>${abiertosPeriodo.length} tickets nuevos</strong> durante ${mesLabel} y cerró <strong>${totalCerrados} tickets</strong> en total
+      El departamento recibió <strong>${totalActivos} tickets</strong> durante ${mesLabel} y cerró <strong>${totalCerrados} tickets</strong> en total
       (incluyendo pendientes de meses anteriores), logrando una efectividad del <strong>${efectividadGlobal}%</strong>.
       El tiempo promedio de resolución fue de <strong>${avgLabel}</strong>.
       Al cierre del mes quedan <strong>${pendientesAlCierre.length} tickets pendientes</strong> para el siguiente período.
@@ -2121,8 +2131,15 @@ function generarReporteMensual(periodo){
   @media print{.page{padding:20px 24px}@page{margin:1cm}}`;
 
   const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte ${mesLabel}</title><style>${css}</style></head><body>${pg1}${pg2}${pg3}</body></html>`;
-  const w=window.open('','_blank');
-  if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),600);}
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  const d=new Date(plan.fecha);
+  a.download='Plan_'+d.getDate()+'_'+['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]+'_'+d.getFullYear()+'.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✅ Plan descargado');
 }
 let actPeriod='mes';
 let actDay=new Date(); actDay.setHours(0,0,0,0);
@@ -2460,21 +2477,32 @@ function generarPDF(plan){
   </div>
   </body></html>`;
 
-  const w=window.open('','_blank');
-  if(w){
-    w.document.write(html);
-    w.document.close();
-    setTimeout(()=>{
-      // Agregar botones de acción al PDF
-      const div=w.document.createElement('div');
-      div.style.cssText='position:fixed;bottom:20px;right:20px;display:flex;gap:10px;z-index:1000';
-      div.innerHTML=`
-        <button onclick="window.print()" style="padding:10px 20px;background:#B91C1C;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:sans-serif">
-          🖨️ Imprimir
-        </button>`;
-      w.document.body.appendChild(div);
-    },400);
-  }
+  // Guardar HTML del reporte para descarga posterior
+  window._reporteHTML=html;
+  window._reporteTitulo=mesLabel;
+
+  // Mostrar reporte dentro de la app
+  const body=document.getElementById('rep-view-body');
+  const title=document.getElementById('rep-view-title');
+  if(body) body.innerHTML=`<div style="max-width:720px;margin:0 auto">${pg1}${pg2}${pg3}</div>`;
+  if(title) title.textContent='Reporte '+mesLabel;
+  showView('reporte');
+  window.scrollTo(0,0);
+}
+
+function descargarReportePDF(){
+  if(!window._reporteHTML){showToast('No hay reporte generado');return;}
+  // Crear blob HTML y descargar
+  const blob=new Blob([window._reporteHTML],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='Reporte_'+( window._reporteTitulo||'Mantenimiento').replace(/\s+/g,'_')+'.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✅ Reporte descargado');
 }
 
 function renderPlanHistorial(){
