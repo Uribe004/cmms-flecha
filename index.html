@@ -332,6 +332,7 @@ textarea{resize:none;min-height:80px}
       <div style="font-size:13px;font-weight:600;color:var(--g500);margin-bottom:8px" id="dash-total"></div>
       <div class="kpi-row" id="kpi-grid"></div>
       <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:16px" id="kpi-grid2"></div>
+      <div class="card" id="kpi-arrastre" style="display:none;margin-bottom:16px"></div>
       <div class="donut-panel">
         <div class="donut-header" onclick="toggleDonut()">
           <span style="font-size:13px;font-weight:700;color:var(--g800)"><i class="ti ti-chart-pie" style="margin-right:6px;font-size:15px;color:var(--red)"></i>Vista general del período</span>
@@ -1283,15 +1284,46 @@ function renderEstChart(){
 function renderDash(){
   const [pStart,pEnd]=getPeriodRange(dashPeriod);
   const inP=window._tickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
-  const ab=inP.filter(t=>t.estado==='Abierto').length;
-  const pr=inP.filter(t=>t.estado==='En Proceso').length;
+  const now=new Date();
+
+  // Tickets activos de todos los meses (para número grande)
+  const todosActivos=window._tickets.filter(t=>t.estado!=='Cerrado');
+  const ab=todosActivos.filter(t=>t.estado==='Abierto').length;
+  const pr=todosActivos.filter(t=>t.estado==='En Proceso').length;
+
+  // Cerrados solo del período actual
   const ce=inP.filter(t=>t.estado==='Cerrado').length;
+
+  // Para porcentaje de KPIs — base = tickets del período
+  const totalPeriodo=inP.length||1;
   const totalReal=ab+pr+ce;
   const total=totalReal||1;
-  const efectividad=Math.round(ce/total*100);
+
+  // Efectividad = solo del período actual
+  const abPeriodo=inP.filter(t=>t.estado==='Abierto'||t.estado==='En Proceso').length;
+  const efectividad=Math.round(ce/(inP.length||1)*100);
   const cerradosTotal=ce;
   const cerradosATiempo=ce;
-  const totalPeriodo=total;
+
+  // ── Arrastre: tickets activos de meses ANTERIORES al período ──
+  const arrastreByMes={};
+  const MESES_C=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  todosActivos.forEach(t=>{
+    if(t.ts>=pStart) return; // solo anteriores al período
+    const d=new Date(t.ts);
+    const mesKey=d.getFullYear()+'-'+d.getMonth();
+    const mesLabel=MESES_C[d.getMonth()]+' '+d.getFullYear();
+    if(!arrastreByMes[mesKey]) arrastreByMes[mesKey]={label:mesLabel,activos:0,totalAbiertos:0,ts:d.getTime()};
+    arrastreByMes[mesKey].activos++;
+  });
+  // Total abiertos por mes para calcular porcentaje
+  window._tickets.forEach(t=>{
+    const d=new Date(t.ts);
+    const mesKey=d.getFullYear()+'-'+d.getMonth();
+    if(arrastreByMes[mesKey]) arrastreByMes[mesKey].totalAbiertos++;
+  });
+  const arrastreArr=Object.values(arrastreByMes).sort((a,b)=>b.ts-a.ts);
+  const totalArrastre=arrastreArr.reduce((s,m)=>s+m.activos,0);
 
 
 
@@ -1306,42 +1338,64 @@ function renderDash(){
   }
 
   // Total tickets primero
-  const totalEl=document.getElementById('dash-total'); if(totalEl)totalEl.textContent=totalReal+' ticket'+(totalReal!==1?'s':'');
+  const totalEl=document.getElementById('dash-total');
+  if(totalEl) totalEl.textContent=(ab+pr)+' activos · '+ce+' cerrados este período';
 
-  // Desglose por mes para cada KPI
-  function mkDesglose(tickets, filterFn){
+  // Desglose por mes para Abiertos y En proceso (todos los meses activos)
+  function mkDesgloseActivos(estado){
     const byM={};
-    tickets.filter(filterFn).forEach(t=>{
-      const d=new Date(t.ts); const k=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()];
+    todosActivos.filter(t=>t.estado===estado).forEach(t=>{
+      const d=new Date(t.ts);
+      const k=MESES_C[d.getMonth()];
       byM[k]=(byM[k]||0)+1;
     });
-    const arr=Object.entries(byM).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const arr=Object.entries(byM).sort((a,b)=>b[1]-a[1]).slice(0,4);
     if(arr.length<=1)return'';
     return'<div style="border-top:0.5px solid rgba(0,0,0,.08);margin-top:6px;padding-top:5px;display:flex;flex-direction:column;gap:2px">'+arr.map(([l,n])=>'<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:var(--g500)">'+l+'</span><span style="font-weight:700">'+n+'</span></div>').join('')+'</div>';
   }
-  const desgloseAb=mkDesglose(window._tickets,t=>t.estado==='Abierto');
-  const desglosePr=mkDesglose(window._tickets,t=>t.estado==='En Proceso');
-  const desgloseCe=mkDesglose(inP,t=>t.estado==='Cerrado');
+  const desgloseAb=mkDesgloseActivos('Abierto');
+  const desglosePr=mkDesgloseActivos('En Proceso');
 
   document.getElementById('kpi-grid').innerHTML=`
     <div class="kpi kpi-blue" onclick="goToTickets('Abierto')" style="cursor:pointer">
       <div class="kpi-lbl">Abiertos</div><div class="kpi-val">${ab}</div>
-      <div class="kpi-sub">${pct(ab,total)}% del período</div>
-      <div class="kpi-arc">${arc(pct(ab,total),'#1D4ED8')}</div>
+      <div class="kpi-sub">todos los activos</div>
+      <div class="kpi-arc">${arc(pct(ab,ab+pr+ce||1),'#1D4ED8')}</div>
       ${desgloseAb}
     </div>
     <div class="kpi kpi-amber" onclick="goToTickets('En Proceso')" style="cursor:pointer">
       <div class="kpi-lbl">En proceso</div><div class="kpi-val">${pr}</div>
-      <div class="kpi-sub">${pct(pr,total)}% del período</div>
-      <div class="kpi-arc">${arc(pct(pr,total),'#D97706')}</div>
+      <div class="kpi-sub">todos los activos</div>
+      <div class="kpi-arc">${arc(pct(pr,ab+pr+ce||1),'#D97706')}</div>
       ${desglosePr}
     </div>
     <div class="kpi kpi-green" onclick="goToTickets('Cerrado')" style="cursor:pointer">
       <div class="kpi-lbl">Cerrados</div><div class="kpi-val">${ce}</div>
-      <div class="kpi-sub">${pct(ce,total)}% del período</div>
-      <div class="kpi-arc">${arc(pct(ce,total),'#15803D')}</div>
-      ${desgloseCe}
+      <div class="kpi-sub">${pct(ce,inP.length||1)}% del período</div>
+      <div class="kpi-arc">${arc(pct(ce,inP.length||1),'#15803D')}</div>
     </div>`;
+
+  // ── Arrastre — siempre visible ──────────────────────────────────────────
+  const arrEl=document.getElementById('kpi-arrastre');
+  if(arrEl){
+    if(!arrastreArr.length){
+      arrEl.style.display='none';
+    } else {
+      arrEl.style.display='block';
+      const rowsHTML=arrastreArr.map(m=>{
+        const pctPend=Math.round(m.activos/m.totalAbiertos*100);
+        return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--g100)">
+          <span style="font-size:12px;font-weight:600;color:var(--g700);min-width:60px">${m.label}</span>
+          <div style="flex:1;height:6px;background:var(--g100);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pctPend}%;background:var(--amber);border-radius:3px"></div>
+          </div>
+          <span style="font-size:11px;font-weight:700;color:var(--amber-d);min-width:28px;text-align:right">${pctPend}%</span>
+          <span style="font-size:11px;color:var(--g400)">${m.activos} pendientes</span>
+        </div>`;
+      }).join('');
+      arrEl.innerHTML=`<div class="card-title" style="margin-bottom:8px"><i class="ti ti-history" style="color:var(--amber)"></i>Arrastre — ${totalArrastre} ticket${totalArrastre!==1?'s':''} de meses anteriores</div>${rowsHTML}`;
+    }
+  }
 
   const g2=document.getElementById('kpi-grid2'); if(g2)g2.innerHTML='';
 
