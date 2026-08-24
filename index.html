@@ -2002,219 +2002,304 @@ function generarReporteMensual(periodo){
   const mesLabel=MESES_L[pDate.getMonth()]+' '+pDate.getFullYear();
   const daysInMonth=new Date(pDate.getFullYear(),pDate.getMonth()+1,0).getDate();
 
-  // ── Datos base — consistente con dashboard ──
+  // ── Datos del período ──────────────────────────────────
   const todosTickets=window._tickets;
-  // Tickets del período (creados en este período)
-  const abiertosPeriodo=todosTickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
-  // Cerrados en este período
-  const cerradosEnPeriodo=todosTickets.filter(t=>t.tsC&&t.tsC>=pStart&&t.tsC<=pEnd);
-  // Estados actuales del período
-  const abRep=abiertosPeriodo.filter(t=>t.estado==='Abierto').length;
-  const prRep=abiertosPeriodo.filter(t=>t.estado==='En Proceso').length;
-  const ceRep=cerradosEnPeriodo.length;
-  const totalActivos=abRep+prRep+ceRep||1;
-  const totalCerrados=ceRep;
-  const efectividadGlobal=Math.round(ceRep/totalActivos*100);
-  // Pendientes al cierre
+  const recibidos=todosTickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
+  const resueltos=todosTickets.filter(t=>t.tsC&&t.tsC>=pStart&&t.tsC<=pEnd);
+  // Arrastre: tickets de meses anteriores activos al inicio del período
+  const arrastreTks=todosTickets.filter(t=>t.ts<pStart&&(!t.tsC||t.tsC>=pStart));
+  const totalBase=recibidos.length+arrastreTks.length||1;
+  const efectividadGlobal=Math.round(resueltos.length/totalBase*100);
   const pendientesAlCierre=todosTickets.filter(t=>t.estado!=='Cerrado');
-  // Promedio resolución
-  const avgMs=cerradosEnPeriodo.length?cerradosEnPeriodo.reduce((s,t)=>s+(t.tsC-t.ts),0)/cerradosEnPeriodo.length:0;
-  const avgLabel=fmtHrs(avgMs);
 
-  // Desglose cerrados por mes de apertura
-  const cerradosByMes={};
-  cerradosEnPeriodo.forEach(t=>{
-    const d=new Date(t.ts); const key=MESES_C[d.getMonth()]+' '+d.getFullYear();
-    cerradosByMes[key]=(cerradosByMes[key]||0)+1;
-  });
-  const desgloseStr=Object.entries(cerradosByMes).map(([k,v])=>`<span style="margin-right:12px;color:#6B7280;font-size:11px">${k}: <strong>${v}</strong></span>`).join('');
+  // ── Datos mes anterior para comparativa ───────────────
+  const prevStart=new Date(pDate.getFullYear(),pDate.getMonth()-1,1).getTime();
+  const prevEnd=new Date(pDate.getFullYear(),pDate.getMonth(),0,23,59,59,999).getTime();
+  const prevRecibidos=todosTickets.filter(t=>t.ts>=prevStart&&t.ts<=prevEnd).length;
+  const prevResueltos=todosTickets.filter(t=>t.tsC&&t.tsC>=prevStart&&t.tsC<=prevEnd).length;
+  const prevArrastre=todosTickets.filter(t=>t.ts<prevStart&&(!t.tsC||t.tsC>=prevStart)).length;
+  const prevBase=prevRecibidos+prevArrastre||1;
+  const prevEfectividad=Math.round(prevResueltos/prevBase*100);
+  const prevMesLabel=MESES_L[pDate.getMonth()===0?11:pDate.getMonth()-1];
 
-  // ── Fallas por categoría y subcategoría ──
-  const catCount={};const subCount={};
-  abiertosPeriodo.forEach(t=>{
-    catCount[t.cat]=(catCount[t.cat]||0)+1;
-    const sk=t.cat+'||'+t.sub; subCount[sk]=(subCount[sk]||0)+1;
-  });
-  const catsSorted=Object.entries(catCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxCat=catsSorted[0]?.[1]||1;
+  function delta(curr,prev){ if(!prev)return''; const d=curr-prev; const pct=Math.round(Math.abs(d)/prev*100); return d>=0?`<span style="color:#15803D;font-size:11px;font-weight:700">↑ ${pct}% vs ${prevMesLabel}</span>`:`<span style="color:#B91C1C;font-size:11px;font-weight:700">↓ ${pct}% vs ${prevMesLabel}</span>`; }
+  function deltaPoints(curr,prev){ const d=curr-prev; return d>=0?`<span style="color:#15803D;font-size:11px;font-weight:700">↑ ${d} pts vs ${prevMesLabel}</span>`:`<span style="color:#B91C1C;font-size:11px;font-weight:700">↓ ${Math.abs(d)} pts vs ${prevMesLabel}</span>`; }
 
-  // ── Efectividad por estación ──
-  const estRows=ESTACIONES.map(est=>{
-    const tks=abiertosPeriodo.filter(t=>t.est===est); if(!tks.length)return null;
-    const ce=cerradosEnPeriodo.filter(t=>t.est===est).length;
-    const pct=Math.round(ce/tks.length*100);
+  // ── Estaciones ─────────────────────────────────────────
+  const estData=ESTACIONES.map(est=>{
+    const rec=recibidos.filter(t=>t.est===est).length;
+    const res=resueltos.filter(t=>t.est===est).length;
+    if(!rec&&!res) return null;
+    const pct=Math.round(res/(rec||1)*100);
     const color=pct>=80?'#15803D':pct>=50?'#D97706':'#B91C1C';
-    return{est,total:tks.length,ce,pct,color};
-  }).filter(Boolean).sort((a,b)=>b.pct-a.pct);
+    return{est,rec,res,pct,color};
+  }).filter(Boolean).sort((a,b)=>b.rec-a.rec);
 
-  // ── Actividad diaria ──
+  const estacionTop=estData[0]?.est||'—';
+
+  // ── Fallas ─────────────────────────────────────────────
+  const catCount={};const subCount={};
+  recibidos.forEach(t=>{ catCount[t.cat]=(catCount[t.cat]||0)+1; const sk=t.cat+'||'+t.sub; subCount[sk]=(subCount[sk]||0)+1; });
+  const catsSorted=Object.entries(catCount).sort((a,b)=>b[1]-a[1]);
+  const fallaTop=catsSorted[0]?.[0]||'—';
+  const fallaTopN=catsSorted[0]?.[1]||0;
+
+  // ── Planes del período ─────────────────────────────────
+  const planesDelPeriodo=planesGuardados.filter(pl=>pl.fecha>=pStart&&pl.fecha<=pEnd);
+  const planPct=planesDelPeriodo.length?Math.round(planesDelPeriodo.reduce((s,pl)=>{ const ce=pl.tickets.filter(t=>{ const tt=window._tickets.find(x=>(x._key||x.id)===t.key); return tt&&tt.estado==='Cerrado'; }).length; return s+(pl.total>0?ce/pl.total:0); },0)/planesDelPeriodo.length*100):0;
+
+  // ── Actividad diaria ───────────────────────────────────
   const dailyRows=[];
   for(let d=1;d<=daysInMonth;d++){
     const dStart=new Date(pDate.getFullYear(),pDate.getMonth(),d,0,0,0,0).getTime();
     const dEnd=dStart+86399999;
-    const ab=todosTickets.filter(t=>t.ts>=dStart&&t.ts<=dEnd).length;
-    const ce=cerradosEnPeriodo.filter(t=>t.tsC&&t.tsC>=dStart&&t.tsC<=dEnd).length;
+    const ab=recibidos.filter(t=>t.ts>=dStart&&t.ts<=dEnd).length;
+    const ce=resueltos.filter(t=>t.tsC>=dStart&&t.tsC<=dEnd).length;
     const dayDate=new Date(dStart);
     if(ab>0||ce>0) dailyRows.push({d,dia:DIAS_S[dayDate.getDay()],ab,ce});
   }
+  const maxDaily=Math.max(...dailyRows.map(r=>r.ab+r.ce),1);
 
-  // ── Construir HTML del reporte ──
-  const pg1=`
-  <div class="page">
-    <div class="header">
+  // ── Párrafo ejecutivo ──────────────────────────────────
+  const tendStr=resueltos.length>prevResueltos?`un aumento del ${Math.round((resueltos.length-prevResueltos)/prevResueltos*100)}% respecto a ${prevMesLabel}`:`una variación respecto a ${prevMesLabel}`;
+  const parrafo=`Durante ${mesLabel}, el departamento de Mantenimiento Correctivo recibió <strong>${recibidos.length} tickets</strong> y resolvió <strong>${resueltos.length}</strong>, logrando una efectividad del <strong>${efectividadGlobal}%</strong> — ${tendStr}. ${estacionTop} fue la estación con mayor actividad. Al cierre del mes quedan <strong>${pendientesAlCierre.length} tickets pendientes</strong>${arrastreTks.length?` (incluyendo ${arrastreTks.length} de meses anteriores)`:''}.`;
+
+  // ══════════════════════════════════════════════════════
+  // CSS
+  // ══════════════════════════════════════════════════════
+  const css=`
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;color:#111827;background:#F8FAFC}
+    .page{max-width:780px;margin:0 auto 0;padding:40px;background:white;page-break-after:always}
+    .page:last-child{page-break-after:auto}
+    /* Header */
+    .rpt-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid #E5E7EB}
+    .rpt-brand{font-size:11px;font-weight:800;color:#B91C1C;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px}
+    .rpt-title{font-size:26px;font-weight:700;color:#111827;letter-spacing:-.5px;margin-bottom:3px}
+    .rpt-sub{font-size:13px;color:#6B7280}
+    .rpt-badge{background:linear-gradient(135deg,#B91C1C,#991B1B);color:white;padding:14px 20px;border-radius:12px;text-align:center;min-width:110px}
+    .rpt-badge-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;opacity:.85;margin-bottom:4px}
+    .rpt-badge-val{font-size:34px;font-weight:800;line-height:1}
+    .rpt-badge-sub{font-size:10px;opacity:.8;margin-top:2px}
+    /* KPI grid */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+    .kpi-card{background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:14px;position:relative;overflow:hidden}
+    .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+    .kpi-card.blue::before{background:#1D4ED8}
+    .kpi-card.green::before{background:#15803D}
+    .kpi-card.amber::before{background:#D97706}
+    .kpi-card.red::before{background:#B91C1C}
+    .kpi-card-label{font-size:10px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+    .kpi-card-val{font-size:28px;font-weight:700;color:#111827;line-height:1;margin-bottom:4px}
+    .kpi-card-delta{margin-top:4px;min-height:16px}
+    /* Párrafo */
+    .exec-para{background:#FEF2F2;border-left:4px solid #B91C1C;border-radius:0 8px 8px 0;padding:14px 16px;font-size:13px;color:#374151;line-height:1.8;margin-bottom:24px}
+    /* Tabla estaciones */
+    .est-table{width:100%;border-collapse:collapse;margin-bottom:24px}
+    .est-table th{font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:2px solid #E5E7EB;text-align:left}
+    .est-table th:not(:first-child){text-align:center}
+    .est-table td{padding:8px 10px;border-bottom:1px solid #F3F4F6;font-size:12px;color:#374151}
+    .est-table td:not(:first-child){text-align:center}
+    .est-name-td{font-weight:600;color:#111827}
+    .bar-wrap{display:flex;align-items:center;gap:8px}
+    .bar-bg{flex:1;height:7px;background:#F3F4F6;border-radius:4px;overflow:hidden}
+    .bar-fg{height:100%;border-radius:4px}
+    .pct-label{font-size:12px;font-weight:700;min-width:36px;text-align:right}
+    /* Fallas */
+    .falla-block{border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;margin-bottom:8px}
+    .falla-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#F9FAFB;border-bottom:1px solid #E5E7EB}
+    .falla-header-name{font-size:13px;font-weight:700;color:#111827}
+    .falla-header-count{font-size:12px;font-weight:700;color:#B91C1C;background:#FEE2E2;padding:2px 8px;border-radius:10px}
+    .sub-row{display:flex;align-items:center;gap:10px;padding:7px 14px;border-top:1px solid #F9FAFB}
+    .sub-name{font-size:12px;color:#374151;flex:1}
+    .sub-bar{width:80px;height:5px;background:#F3F4F6;border-radius:3px;overflow:hidden}
+    .sub-bar-fg{height:100%;background:#D1D5DB;border-radius:3px}
+    /* Bullets equipo */
+    .bullet-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
+    .bullet-card{background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:14px;display:flex;align-items:flex-start;gap:10px}
+    .bullet-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+    .bullet-label{font-size:10px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+    .bullet-val{font-size:15px;font-weight:700;color:#111827}
+    /* Daily table */
+    .daily-table{width:100%;border-collapse:collapse;margin-bottom:20px}
+    .daily-table th{font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.05em;padding:6px 8px;border-bottom:2px solid #E5E7EB;text-align:left}
+    .daily-table td{padding:6px 8px;border-bottom:1px solid #F9FAFB;font-size:12px}
+    .daily-bar-wrap{display:flex;gap:2px;align-items:center}
+    /* Pendientes */
+    .pendiente-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid #FEE2E2;border-radius:6px;border-left:3px solid #B91C1C;margin-bottom:4px;background:#FFF}
+    /* Footer */
+    .rpt-footer{margin-top:28px;padding-top:14px;border-top:1px solid #F3F4F6;display:flex;justify-content:space-between;align-items:flex-end}
+    .rpt-footer-text{font-size:10px;color:#9CA3AF}
+    .firma-wrap{display:flex;gap:32px}
+    .firma{text-align:center}
+    .firma-line{width:90px;border-bottom:1px solid #374151;height:24px;margin-bottom:4px}
+    .firma-label{font-size:9px;color:#9CA3AF}
+    /* Divider */
+    .section-title{font-size:13px;font-weight:700;color:#111827;border-bottom:1px solid #E5E7EB;padding-bottom:8px;margin-bottom:14px;margin-top:4px;display:flex;align-items:center;gap:6px}
+    .section-title::before{content:'';display:inline-block;width:3px;height:14px;background:#B91C1C;border-radius:2px}
+    .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid #E5E7EB}
+    .page-brand{font-size:10px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.1em}
+    .page-num{font-size:10px;color:#9CA3AF}
+    @media print{body{background:white}.page{padding:24px;margin:0}@page{margin:.8cm}}`;
+
+  // ══════════════════════════════════════════════════════
+  // PÁGINA 1 — VISIÓN EJECUTIVA
+  // ══════════════════════════════════════════════════════
+  const pg1=`<div class="page">
+    <div class="rpt-header">
       <div>
-        <div class="brand">Flecha Gasolineras</div>
-        <div class="title">Reporte Mensual de Mantenimiento</div>
-        <div class="subtitle">${mesLabel} · Departamento de Mantenimiento Correctivo</div>
+        <div class="rpt-brand">Flecha Gasolineras</div>
+        <div class="rpt-title">Reporte de Mantenimiento</div>
+        <div class="rpt-sub">${mesLabel} &nbsp;·&nbsp; Departamento Correctivo</div>
       </div>
-      <div class="eff-badge">
-        <div style="font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:2px">EFECTIVIDAD</div>
-        <div style="font-size:30px;font-weight:800;line-height:1">${efectividadGlobal}%</div>
-        <div style="font-size:10px;opacity:.85">${totalCerrados} de ${totalActivos} tickets</div>
-      </div>
-    </div>
-    <div class="kpi-row">
-      <div class="kpi-box" style="border-top-color:#1D4ED8">
-        <div class="kpi-val" style="color:#1D4ED8">${abiertosPeriodo.length}</div>
-        <div class="kpi-lbl">Tickets abiertos</div>
-      </div>
-      <div class="kpi-box" style="border-top-color:#15803D">
-        <div class="kpi-val" style="color:#15803D">${totalCerrados}</div>
-        <div class="kpi-lbl">Tickets cerrados</div>
-        ${desgloseStr?`<div style="margin-top:4px">${desgloseStr}</div>`:''}
-      </div>
-      <div class="kpi-box" style="border-top-color:#B91C1C">
-        <div class="kpi-val" style="color:#B91C1C">${pendientesAlCierre.length}</div>
-        <div class="kpi-lbl">Pendientes al cierre</div>
-      </div>
-      <div class="kpi-box" style="border-top-color:#D97706">
-        <div class="kpi-val" style="color:#D97706">${avgLabel}</div>
-        <div class="kpi-lbl">Prom. resolución</div>
+      <div class="rpt-badge">
+        <div class="rpt-badge-label">Efectividad</div>
+        <div class="rpt-badge-val">${efectividadGlobal}%</div>
+        <div class="rpt-badge-sub">${resueltos.length} de ${totalBase} tickets</div>
       </div>
     </div>
-    <div class="section-title">Resumen ejecutivo</div>
-    <div class="summary-box">
-      El departamento recibió <strong>${totalActivos} tickets</strong> durante ${mesLabel} y cerró <strong>${totalCerrados} tickets</strong> en total
-      (incluyendo pendientes de meses anteriores), logrando una efectividad del <strong>${efectividadGlobal}%</strong>.
-      El tiempo promedio de resolución fue de <strong>${avgLabel}</strong>.
-      Al cierre del mes quedan <strong>${pendientesAlCierre.length} tickets pendientes</strong> para el siguiente período.
+
+    <div class="kpi-grid">
+      <div class="kpi-card blue">
+        <div class="kpi-card-label">Recibidos</div>
+        <div class="kpi-card-val">${recibidos.length}</div>
+        <div class="kpi-card-delta">${delta(recibidos.length,prevRecibidos)}</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-card-label">Resueltos</div>
+        <div class="kpi-card-val">${resueltos.length}</div>
+        <div class="kpi-card-delta">${delta(resueltos.length,prevResueltos)}</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-card-label">Arrastre</div>
+        <div class="kpi-card-val">${arrastreTks.length}</div>
+        <div class="kpi-card-delta">&nbsp;</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-card-label">Pendientes al cierre</div>
+        <div class="kpi-card-val">${pendientesAlCierre.length}</div>
+        <div class="kpi-card-delta">${deltaPoints(efectividadGlobal,prevEfectividad)}</div>
+      </div>
     </div>
-    <div class="footer">Flecha Gasolineras · ${mesLabel} · Página 1 de 3 · Generado el ${new Date().toLocaleString('es-MX')}</div>
+
+    <div class="exec-para">${parrafo}</div>
+
+    <div class="section-title">Desempeño por estación</div>
+    <table class="est-table">
+      <thead><tr>
+        <th>Estación</th>
+        <th>Recibidos</th>
+        <th>Resueltos</th>
+        <th style="min-width:160px">Efectividad</th>
+      </tr></thead>
+      <tbody>
+        ${estData.map(r=>`<tr>
+          <td class="est-name-td">${r.est}</td>
+          <td>${r.rec}</td>
+          <td>${r.res}</td>
+          <td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fg" style="width:${r.pct}%;background:${r.color}"></div></div><span class="pct-label" style="color:${r.color}">${r.pct}%</span></div></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+
+    <div class="rpt-footer">
+      <div class="rpt-footer-text">Flecha Gasolineras &nbsp;·&nbsp; ${mesLabel} &nbsp;·&nbsp; Página 1 de 3<br>Generado el ${new Date().toLocaleString('es-MX')}</div>
+      <div class="firma-wrap">
+        <div class="firma"><div class="firma-line"></div><div class="firma-label">Director General</div></div>
+        <div class="firma"><div class="firma-line"></div><div class="firma-label">Jefe de Mantenimiento</div></div>
+      </div>
+    </div>
   </div>`;
 
-  const pg2=`
-  <div class="page">
-    <div class="page-header"><span class="brand-sm">Flecha Gasolineras · ${mesLabel}</span></div>
-    <div class="section-title" style="margin-bottom:14px">Efectividad por estación</div>
-    <div class="table-header" style="grid-template-columns:100px 1fr 50px 50px">
-      <span>Estación</span><span>Efectividad</span><span style="text-align:center">Abier.</span><span style="text-align:center">Cerr.</span>
+  // ══════════════════════════════════════════════════════
+  // PÁGINA 2 — RESUMEN EQUIPO
+  // ══════════════════════════════════════════════════════
+  const pg2=`<div class="page">
+    <div class="page-header">
+      <div class="page-brand">Flecha Gasolineras &nbsp;·&nbsp; ${mesLabel}</div>
+      <div class="page-num">Página 2 de 3</div>
     </div>
-    ${estRows.map(r=>`
-    <div class="table-row" style="grid-template-columns:100px 1fr 50px 50px">
-      <span class="est-name">${r.est}</span>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="bar-track"><div class="bar-fill" style="width:${r.pct}%;background:${r.color}"></div></div>
-        <span style="font-size:12px;font-weight:700;color:${r.color};min-width:34px">${r.pct}%</span>
-      </div>
-      <span style="font-size:13px;font-weight:600;color:#1D4ED8;text-align:center">${r.total}</span>
-      <span style="font-size:13px;font-weight:600;color:#15803D;text-align:center">${r.ce}</span>
-    </div>`).join('')}
 
-    <div class="section-title" style="margin-top:24px;margin-bottom:14px">Fallas más frecuentes</div>
-    ${catsSorted.map(([cat,cnt])=>{
+    <div class="section-title">Resumen del mes</div>
+    <div class="bullet-grid">
+      <div class="bullet-card"><div class="bullet-icon">✅</div><div><div class="bullet-label">Tickets resueltos</div><div class="bullet-val">${resueltos.length} tickets cerrados</div></div></div>
+      <div class="bullet-card"><div class="bullet-icon">📍</div><div><div class="bullet-label">Estación más activa</div><div class="bullet-val">${estacionTop} (${estData[0]?.rec||0} tickets)</div></div></div>
+      <div class="bullet-card"><div class="bullet-icon">🔧</div><div><div class="bullet-label">Falla más frecuente</div><div class="bullet-val">${fallaTop} (${fallaTopN} casos)</div></div></div>
+      <div class="bullet-card"><div class="bullet-icon">📋</div><div><div class="bullet-label">Planes de trabajo</div><div class="bullet-val">${planesDelPeriodo.length} planes — ${planPct}% completado</div></div></div>
+      <div class="bullet-card"><div class="bullet-icon">⏳</div><div><div class="bullet-label">Tickets pendientes</div><div class="bullet-val">${pendientesAlCierre.length} pasan al siguiente mes</div></div></div>
+      <div class="bullet-card"><div class="bullet-icon">📈</div><div><div class="bullet-label">Efectividad</div><div class="bullet-val">${efectividadGlobal}% ${efectividadGlobal>=prevEfectividad?'↑ mejorando':'↓ a mejorar'}</div></div></div>
+    </div>
+
+    <div class="section-title">Fallas más frecuentes</div>
+    ${catsSorted.slice(0,6).map(([cat,cnt])=>{
       const subsOfCat=Object.entries(subCount).filter(([k])=>k.startsWith(cat+'||')).sort((a,b)=>b[1]-a[1]).slice(0,4);
-      return`<div class="cat-block">
-        <div class="cat-header">
-          <span style="font-size:13px;font-weight:700;color:#111827">${cat}</span>
-          <span style="font-size:12px;font-weight:700;color:#B91C1C">${cnt} tickets</span>
-        </div>
-        ${subsOfCat.map(([k,v])=>{const sub=k.split('||')[1];return`
-        <div class="sub-row">
-          <span class="sub-name">${sub.length>40?sub.substring(0,40)+'…':sub}</span>
-          <div class="bar-track" style="max-width:120px"><div class="bar-fill" style="width:${Math.round(v/cnt*100)}%;background:#9CA3AF"></div></div>
-          <span style="font-size:12px;font-weight:600;color:#374151;min-width:16px;text-align:right">${v}</span>
-        </div>`}).join('')}
+      return`<div class="falla-block">
+        <div class="falla-header"><span class="falla-header-name">${cat}</span><span class="falla-header-count">${cnt} tickets</span></div>
+        ${subsOfCat.map(([k,v])=>{ const sub=k.split('||')[1]; return`<div class="sub-row"><span class="sub-name">${sub.length>45?sub.substring(0,45)+'…':sub}</span><div class="sub-bar"><div class="sub-bar-fg" style="width:${Math.round(v/cnt*100)}%"></div></div><span style="font-size:12px;font-weight:600;color:#374151;min-width:20px;text-align:right">${v}</span></div>`; }).join('')}
       </div>`;
     }).join('')}
-    <div class="footer">Flecha Gasolineras · ${mesLabel} · Página 2 de 3 · Generado el ${new Date().toLocaleString('es-MX')}</div>
-  </div>`;
 
-  const pg3=`
-  <div class="page">
-    <div class="page-header"><span class="brand-sm">Flecha Gasolineras · ${mesLabel}</span></div>
-    <div class="section-title" style="margin-bottom:14px">Actividad diaria</div>
-    <div class="table-header" style="grid-template-columns:90px 50px 50px 1fr">
-      <span>Fecha</span><span style="text-align:center">Nuevos</span><span style="text-align:center">Cerrados</span><span></span>
-    </div>
-    ${dailyRows.map(r=>`
-    <div class="table-row" style="grid-template-columns:90px 50px 50px 1fr">
-      <span class="est-name">${r.dia} ${r.d} ${MESES_C[pDate.getMonth()]}</span>
-      <span style="font-size:12px;font-weight:600;color:#1D4ED8;text-align:center">${r.ab||'—'}</span>
-      <span style="font-size:12px;font-weight:600;color:#15803D;text-align:center">${r.ce||'—'}</span>
-      <div style="display:flex;gap:3px;align-items:center">
-        ${r.ab?`<div style="height:8px;width:${Math.round(r.ab/(Math.max(...dailyRows.map(x=>x.ab+x.ce))||1)*60)}px;background:#DBEAFE;border-radius:2px"></div>`:''}
-        ${r.ce?`<div style="height:8px;width:${Math.round(r.ce/(Math.max(...dailyRows.map(x=>x.ab+x.ce))||1)*60)}px;background:#DCFCE7;border-radius:2px"></div>`:''}
-      </div>
-    </div>`).join('')}
-
-    <div class="section-title" style="margin-top:20px;margin-bottom:10px">Tickets pendientes al cierre del mes</div>
-    ${pendientesAlCierre.slice(0,10).map(t=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid #E5E7EB;border-radius:6px;border-left:3px solid #B91C1C;margin-bottom:5px">
-      <span style="font-size:11px;font-weight:700;color:#B91C1C;min-width:50px">${t.id}</span>
-      <span style="font-size:12px;color:#374151;flex:1">${t.est} · ${t.cat}</span>
-      <span style="font-size:11px;font-weight:700;color:#B91C1C">${elapsed(t.ts)}</span>
-    </div>`).join('')}
-    ${pendientesAlCierre.length>10?`<p style="font-size:11px;color:#9CA3AF;text-align:center;margin-top:6px">+${pendientesAlCierre.length-10} tickets más...</p>`:''}
-
-    <div style="margin-top:28px;padding-top:14px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;align-items:flex-end">
-      <div style="font-size:10px;color:#9CA3AF">Flecha Gasolineras · ${mesLabel} · Página 3 de 3<br>Generado el ${new Date().toLocaleString('es-MX')}</div>
-      <div style="display:flex;gap:32px">
-        <div style="text-align:center"><div style="width:90px;border-bottom:1px solid #374151;height:24px;margin-bottom:4px"></div><div style="font-size:9px;color:#9CA3AF">Director General</div></div>
-        <div style="text-align:center"><div style="width:90px;border-bottom:1px solid #374151;height:24px;margin-bottom:4px"></div><div style="font-size:9px;color:#9CA3AF">Jefe de Mantenimiento</div></div>
-      </div>
+    <div class="rpt-footer">
+      <div class="rpt-footer-text">Flecha Gasolineras &nbsp;·&nbsp; ${mesLabel} &nbsp;·&nbsp; Página 2 de 3</div>
     </div>
   </div>`;
 
-  const css=`
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111827;background:white}
-  .page{max-width:720px;margin:0 auto;padding:36px 40px;page-break-after:always}
-  .page:last-child{page-break-after:auto}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #B91C1C}
-  .brand{font-size:10px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
-  .brand-sm{font-size:10px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.08em}
-  .title{font-size:22px;font-weight:700;color:#111827;margin-bottom:2px}
-  .subtitle{font-size:13px;color:#6B7280}
-  .eff-badge{background:#B91C1C;color:white;padding:10px 16px;border-radius:8px;text-align:center;flex-shrink:0}
-  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
-  .kpi-box{border:1px solid #E5E7EB;border-radius:8px;padding:12px;border-top:3px solid #E5E7EB}
-  .kpi-val{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
-  .kpi-lbl{font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em}
-  .section-title{font-size:14px;font-weight:700;color:#111827;border-bottom:1px solid #E5E7EB;padding-bottom:8px;margin-bottom:12px;margin-top:8px}
-  .summary-box{background:#F9FAFB;border-left:3px solid #B91C1C;padding:12px 14px;font-size:13px;color:#374151;line-height:1.7;border-radius:0 6px 6px 0}
-  .table-header{display:grid;gap:8px;font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;padding:6px 0;border-bottom:2px solid #E5E7EB;margin-bottom:4px}
-  .table-row{display:grid;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #F9FAFB}
-  .est-name{font-size:12px;font-weight:600;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .bar-track{flex:1;height:8px;background:#F3F4F6;border-radius:4px;overflow:hidden}
-  .bar-fill{height:100%;border-radius:4px}
-  .cat-block{border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;margin-bottom:10px}
-  .cat-header{display:flex;justify-content:space-between;padding:9px 14px;background:#F9FAFB}
-  .sub-row{display:flex;align-items:center;gap:10px;padding:7px 14px;border-top:1px solid #F3F4F6}
-  .sub-name{font-size:12px;color:#374151;flex:1}
-  .page-header{margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid #E5E7EB}
-  .footer{margin-top:24px;padding-top:10px;border-top:1px solid #F3F4F6;font-size:10px;color:#9CA3AF;text-align:center}
-  @media print{.page{padding:20px 24px}@page{margin:1cm}}`;
+  // ══════════════════════════════════════════════════════
+  // PÁGINA 3 — ACTIVIDAD DIARIA + PENDIENTES
+  // ══════════════════════════════════════════════════════
+  const pg3=`<div class="page">
+    <div class="page-header">
+      <div class="page-brand">Flecha Gasolineras &nbsp;·&nbsp; ${mesLabel}</div>
+      <div class="page-num">Página 3 de 3</div>
+    </div>
 
-  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte ${mesLabel}</title><style>${css}</style></head><body>${pg1}${pg2}${pg3}</body></html>`;
+    <div class="section-title">Actividad diaria</div>
+    <table class="daily-table">
+      <thead><tr>
+        <th>Fecha</th>
+        <th>Recibidos</th>
+        <th>Resueltos</th>
+        <th style="min-width:160px">Distribución</th>
+      </tr></thead>
+      <tbody>
+        ${dailyRows.map(r=>`<tr>
+          <td style="font-weight:500;color:#374151">${r.dia} ${r.d} ${MESES_C[pDate.getMonth()]}</td>
+          <td style="color:#1D4ED8;font-weight:600">${r.ab||'—'}</td>
+          <td style="color:#15803D;font-weight:600">${r.ce||'—'}</td>
+          <td><div class="daily-bar-wrap">
+            ${r.ab?`<div style="height:8px;width:${Math.round(r.ab/maxDaily*120)}px;background:#DBEAFE;border-radius:2px"></div>`:''}
+            ${r.ce?`<div style="height:8px;width:${Math.round(r.ce/maxDaily*120)}px;background:#DCFCE7;border-radius:2px"></div>`:''}
+          </div></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
 
-  // Guardar HTML del reporte para descarga posterior
+    <div class="section-title">Tickets pendientes al cierre</div>
+    ${pendientesAlCierre.slice(0,12).map(t=>`
+    <div class="pendiente-row">
+      <span style="font-size:11px;font-weight:700;color:#B91C1C;min-width:55px">${t.id}</span>
+      <span style="font-size:12px;color:#374151;flex:1">${t.est} &nbsp;·&nbsp; ${t.cat}</span>
+      <span style="font-size:12px;color:#6B7280">${t.sub}</span>
+      <span style="font-size:11px;font-weight:700;color:#B91C1C;min-width:40px;text-align:right">${elapsed(t.ts)}</span>
+    </div>`).join('')}
+    ${pendientesAlCierre.length>12?`<p style="font-size:11px;color:#9CA3AF;text-align:center;margin-top:8px">+${pendientesAlCierre.length-12} tickets más</p>`:''}
+
+    <div class="rpt-footer">
+      <div class="rpt-footer-text">Flecha Gasolineras &nbsp;·&nbsp; ${mesLabel} &nbsp;·&nbsp; Página 3 de 3<br>Generado el ${new Date().toLocaleString('es-MX')}</div>
+      <div class="firma-wrap">
+        <div class="firma"><div class="firma-line"></div><div class="firma-label">Director General</div></div>
+        <div class="firma"><div class="firma-line"></div><div class="firma-label">Jefe de Mantenimiento</div></div>
+      </div>
+    </div>
+  </div>`;
+
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte ${mesLabel} — Flecha Gasolineras</title><style>${css}</style></head><body>${pg1}${pg2}${pg3}</body></html>`;
+
   window._reporteHTML=html;
   window._reporteTitulo=mesLabel;
-
-  // Mostrar reporte dentro de la app
   const body2=document.getElementById('rep-view-body');
   const title2=document.getElementById('rep-view-title');
-  if(body2) body2.innerHTML=`<div style="max-width:720px;margin:0 auto">${pg1}${pg2}${pg3}</div>`;
+  if(body2) body2.innerHTML=`<div style="max-width:780px;margin:0 auto">${pg1}${pg2}${pg3}</div>`;
   if(title2) title2.textContent='Reporte '+mesLabel;
   showView('reporte');
   window.scrollTo(0,0);
