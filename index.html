@@ -901,7 +901,7 @@ function renderDonut(){
     {label:'Abiertos',val:d.ab,pct:Math.round(d.ab/tot*100),color:'#1D4ED8'},
     {label:'Cerrados',val:d.ce,pct:Math.round(d.ce/tot*100),color:'#15803D'},
     {label:'En proceso',val:d.pr,pct:Math.round(d.pr/tot*100),color:'#D97706'},
-    {label:'Vencidos',val:d.ve,pct:Math.round(d.ve/tot*100),color:'#B91C1C'},
+
   ].map(it=>`<div style="display:flex;align-items:center;gap:8px">
     <span style="width:10px;height:10px;border-radius:2px;background:${it.color};flex-shrink:0"></span>
     <span style="font-size:13px;color:var(--g600);flex:1">${it.label}</span>
@@ -1064,7 +1064,6 @@ function fbSet(path,data){ if(window._db)window._set(window._ref(window._db,path
 
 function sortTickets(list){
   return list.sort((a,b)=>{
-    if(isVencido(a)&&!isVencido(b))return -1; if(isVencido(b)&&!isVencido(a))return 1;
     const o={Alta:0,Media:1,Baja:2};
     if(o[a.urg]!==o[b.urg])return o[a.urg]-o[b.urg];
     if(a.estado==='Cerrado'&&b.estado!=='Cerrado')return 1; if(b.estado==='Cerrado'&&a.estado!=='Cerrado')return -1;
@@ -1455,7 +1454,7 @@ function renderDash(){
         <div style="font-size:11px;color:${ritmoColor};margin-top:2px">${ritmoLabel}</div>
       </div>
     </div>`;
-  window._dashData={ab,pr,ce,ve,total:inP.length};
+  window._dashData={ab,pr,ce,ve:0,total:inP.length};
   if(donutOpen) renderDonut();
   if(estChartOpen) renderEstChart();
   if(fallasChartOpen) renderFallasChart();
@@ -1559,17 +1558,13 @@ function renderTickets(){
 }
 
 function ticketCard(t){
-  const sla=getSLA(t);
-  const venc=isVencido(t);
-  const indColor=venc?'#B91C1C':t.estado==='En Proceso'?'#D97706':t.estado==='Cerrado'?'#15803D':'#1D4ED8';
-  const folioColor=venc?'#B91C1C':t.estado==='En Proceso'?'#D97706':t.estado==='Cerrado'?'#15803D':'#1D4ED8';
+  const venc=false;
+  const indColor=t.estado==='En Proceso'?'#D97706':t.estado==='Cerrado'?'#15803D':'#1D4ED8';
+  const folioColor=t.estado==='En Proceso'?'#D97706':t.estado==='Cerrado'?'#15803D':'#1D4ED8';
   const cerradoStyle=t.estado==='Cerrado'?'opacity:.82':'';
   const atendidoBadge=t.atendidoPor?`<span class="badge b-gray"><i class="ti ti-tool" style="font-size:10px"></i> ${shortName(t.atendidoPor)}</span>`:'';
   let statusLine='';
-  if(venc){
-    const diasFuera=Math.floor((Date.now()-t.ts-(SLA_HRS[t.urg]||24)*3600000)/86400000);
-    statusLine=`<span style="font-size:11px;font-weight:700;color:#B91C1C">🔴 +${diasFuera}d fuera de tiempo</span>`;
-  } else if(t.estado==='Cerrado'){
+  if(t.estado==='Cerrado'){
     statusLine=`<span class="badge b-green">✓ Cerrado</span>`;
   } else if(t.estado==='En Proceso'){
     statusLine=`<span class="badge b-amber">En proceso</span>`;
@@ -1631,8 +1626,7 @@ function resetFilters(){
 // ── TICKET DETAIL ─────────────────────────────────────────
 function openTicket(key){
   const t=window._tickets.find(x=>(x._key||x.id)===key); if(!t)return;
-  const sla=getSLA(t);
-  const venc=isVencido(t);
+  const venc=false;
   const canManage=isMgr();
   const isMtto=window._CR==='tec';
   const canAct=canManage||isMtto;
@@ -1702,7 +1696,7 @@ function openTicket(key){
       <div style="flex:1;background:var(--g50);border:1px solid var(--g200);border-radius:var(--rs);padding:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Tiempo total</div><div style="font-size:15px;font-weight:800">${tC}</div></div>
       <div style="flex:1;background:var(--g50);border:1px solid var(--g200);border-radius:var(--rs);padding:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">En proceso</div><div style="font-size:15px;font-weight:800">${tI}</div></div>
     </div>
-    ${venc&&t.estado!=='Cerrado'?`<div style="background:var(--red-light);border-radius:var(--rs);padding:8px 12px;font-size:12px;color:var(--red-dark);font-weight:700;margin-bottom:10px">🔴 SLA vencido — ${sla.label}</div>`:''}
+
     <div class="dr"><div class="di"><i class="ti ti-align-left"></i></div><div><div class="dl">Descripción</div><div class="dv">${t.desc}</div>${fotoFalla}</div></div>
     <div class="dr"><div class="di"><i class="ti ti-user"></i></div><div><div class="dl">Reportado por</div><div class="dv">${t.rep}</div></div></div>
     <div class="dr"><div class="di"><i class="ti ti-calendar"></i></div><div><div class="dl">Fecha de reporte</div><div class="dv">${fmtDate(t.ts)}</div></div></div>
