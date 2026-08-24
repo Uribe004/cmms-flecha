@@ -389,7 +389,6 @@ textarea{resize:none;min-height:80px}
         <button class="period-btn" id="sf-abierto" onclick="setStatusFilter('Abierto',this)">Abiertos</button>
         <button class="period-btn" id="sf-proceso" onclick="setStatusFilter('En Proceso',this)">En proceso</button>
         <button class="period-btn" id="sf-cerrado" onclick="setStatusFilter('Cerrado',this)">Cerrados</button>
-        <button class="period-btn" id="sf-vencido" onclick="setStatusFilter('vencido',this)">🔴 Vencidos</button>
         <button class="filter-btn" id="filter-toggle-btn" onclick="openFilterPanel()"><i class="ti ti-adjustments-horizontal"></i></button>
       </div>
       <div id="tlist"></div>
@@ -1571,14 +1570,21 @@ function ticketCard(t){
   } else {
     statusLine=`<span class="badge b-blue">Abierto</span>`;
   }
+  const MESES_TC=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const dTC=new Date(t.ts);
+  const fechaVis=dTC.getDate()+' '+MESES_TC[dTC.getMonth()]+' '+dTC.getFullYear();
   return`<div class="tc" style="${cerradoStyle}" onclick="openTicket('${t._key||t.id}')">
     <div class="tc-ind" style="background:${indColor}"></div>
     <div class="tc-body">
       <div class="tc-top">
         <span class="tc-folio" style="color:${folioColor}">${t.id} · ${t.cat}</span>
-        <span class="tc-time">${elapsedWithDate(t.ts)} · ${t.urg}</span>
+        <span class="tc-time">${elapsed(t.ts)}</span>
       </div>
       <div class="tc-cat">${t.sub}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:700;color:var(--g600);background:var(--g100);padding:2px 8px;border-radius:10px"><i class="ti ti-building-store" style="font-size:10px;margin-right:2px"></i>${t.est}</span>
+        <span style="font-size:11px;color:var(--g500)"><i class="ti ti-calendar" style="font-size:10px;margin-right:2px"></i>${fechaVis}</span>
+      </div>
       <div class="tc-desc">${t.desc}</div>
       <div class="tc-bottom">${statusLine}<div style="display:flex;gap:5px">${atendidoBadge}</div></div>
     </div>
