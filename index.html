@@ -1390,13 +1390,14 @@ function renderDash(){
       arrEl.style.display='block';
       const rowsHTML=arrastreArr.map(m=>{
         const pctPend=m.totalDelMes>0?Math.round(m.activos/m.totalDelMes*100):100;
-        return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--g100)">
+        return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--g100);cursor:pointer" onclick="filtrarPorArrastre('${m.label}')" title="Ver tickets de ${m.label}">
           <span style="font-size:12px;font-weight:600;color:var(--g700);min-width:60px">${m.label}</span>
           <div style="flex:1;height:6px;background:var(--g100);border-radius:3px;overflow:hidden">
             <div style="height:100%;width:${pctPend}%;background:var(--amber);border-radius:3px"></div>
           </div>
           <span style="font-size:11px;font-weight:700;color:var(--amber-d);min-width:28px;text-align:right">${pctPend}%</span>
           <span style="font-size:11px;color:var(--g400)">${m.activos} pendientes</span>
+          <i class="ti ti-arrow-right" style="font-size:12px;color:var(--amber)"></i>
         </div>`;
       }).join('');
       arrEl.innerHTML=`<div class="card-title" style="margin-bottom:8px"><i class="ti ti-history" style="color:var(--amber)"></i>Arrastre — ${totalArrastre} ticket${totalArrastre!==1?'s':''} de meses anteriores</div>${rowsHTML}`;
@@ -1507,7 +1508,25 @@ function renderTickets(){
   let base=[...window._tickets];
   if(window._CR==='sup'){const z=SUP_ZONES[window._CU]||[];base=base.filter(t=>z.includes(t.est));}
   let list=applyFiltersToList(base);
-  if(searchQ) list=list.filter(t=>(t.id||'').toLowerCase().includes(searchQ)||(t.desc||'').toLowerCase().includes(searchQ)||(t.est||'').toLowerCase().includes(searchQ)||(t.cat||'').toLowerCase().includes(searchQ)||(t.sub||'').toLowerCase().includes(searchQ));
+  if(searchQ){
+    const MESES_SEARCH=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    list=list.filter(t=>{
+      if((t.id||'').toLowerCase().includes(searchQ)) return true;
+      if((t.desc||'').toLowerCase().includes(searchQ)) return true;
+      if((t.est||'').toLowerCase().includes(searchQ)) return true;
+      if((t.cat||'').toLowerCase().includes(searchQ)) return true;
+      if((t.sub||'').toLowerCase().includes(searchQ)) return true;
+      // Buscar por mes de creación
+      if(MESES_SEARCH.includes(searchQ)){
+        const d=new Date(t.ts);
+        const mesIdx=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'].indexOf(searchQ.substring(0,3));
+        if(mesIdx>=0&&d.getMonth()===mesIdx) return true;
+        const mesIdxL=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'].indexOf(searchQ);
+        if(mesIdxL>=0&&d.getMonth()===mesIdxL) return true;
+      }
+      return false;
+    });
+  }
 
   // Update filter button appearance
   const btn=document.getElementById('filter-toggle-btn');
@@ -2521,6 +2540,21 @@ function _renderPlanHistorialUI(){
   const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   c.innerHTML=planesGuardados.map(plan=>{ const cerrados=plan.tickets.filter(t=>{ const tt=window._tickets.find(x=>(x._key||x.id)===t.key); return tt&&tt.estado==='Cerrado'; }).length; const pct=plan.total>0?Math.round(cerrados/plan.total*100):0; const d=new Date(plan.fecha); const fechaLabel=DIAS[d.getDay()]+' '+d.getDate()+' '+MESES[d.getMonth()]; return`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:13px;font-weight:600;color:var(--g900)">${fechaLabel}</div><div style="font-size:11px;color:var(--g500)">${plan.total} ticket${plan.total!==1?'s':''} planeados</div></div><div style="text-align:right"><div style="font-size:20px;font-weight:700;color:${pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)'}">${pct}%</div><div style="font-size:10px;color:var(--g500)">${cerrados} de ${plan.total} cerrados</div></div></div><div style="height:6px;background:var(--g100);border-radius:3px;overflow:hidden;margin-bottom:10px"><div style="height:100%;width:${pct}%;background:${pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)'};border-radius:3px;transition:width .3s"></div></div><div style="display:flex;gap:8px"><button class="bs bs-out" style="flex:1;font-size:12px" onclick="generarPDF(${JSON.stringify(plan).replace(/"/g,'&quot;')})"><i class="ti ti-download"></i>PDF</button><button class="bs bs-out" style="flex:1;font-size:12px" onclick="verDetallePlan('${plan.id}')"><i class="ti ti-list"></i>Ver detalle</button>${(isMgr()||plan.creadoPor===window._CU)?`<button class="bs" style="flex:1;font-size:12px;background:var(--red-light);color:var(--red-dark);border:none" onclick="eliminarPlan('${plan.id}')"><i class="ti ti-trash"></i>Eliminar</button>`:''}</div></div>`; }).join('');
+}
+
+function filtrarPorArrastre(mesLabel){
+  // Navegar a tickets y filtrar por mes de arrastre
+  navTo('tickets', null);
+  // Poner el mes en la barra de búsqueda
+  setTimeout(()=>{
+    const search=document.getElementById('t-search');
+    if(search){
+      // Extraer solo el mes (ej "Jul" de "Jul 2026")
+      const mes=mesLabel.split(' ')[0];
+      search.value=mes;
+      renderTickets();
+    }
+  },100);
 }
 
 function eliminarPlan(planId){ if(!confirm('¿Eliminar este plan de trabajo?'))return; planesGuardados=planesGuardados.filter(p=>p.id!==planId); if(window._db) window._set(window._ref(window._db,'planes/'+planId),null); _renderPlanHistorialUI(); showToast('Plan eliminado'); }
