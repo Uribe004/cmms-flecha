@@ -738,32 +738,8 @@ try{
   },{onlyOnce:false});
 }catch(e){ console.warn('SLA config not available'); }
 
-// Tickets — migrate legacy states on load
-onValue(ref(db,'tickets'),(snap)=>{
-  if(snap.exists()){
-    window._tickets=Object.entries(snap.val()).map(([k,v])=>{
-      // Migrate: Asignado → Abierto, Esperando Material → En Proceso
-      let estado=v.estado||'Abierto';
-      if(estado==='Asignado') estado='Abierto';
-      if(estado==='Esperando Material') estado='En Proceso';
-      return {...v,estado,_key:k};
-    });
-  } else { window._tickets=[]; }
-  if(window._CU){
-    // Si hay usuario pendiente de restaurar, arrancar ahora que llegaron los datos
-    if(window._pendingUser){
-      const u=window._pendingUser; window._pendingUser=null;
-      window._CU=u; window._CR=getRole(u);
-      window._appReady=true;
-      populateSelects(); buildNav(); buildHistSelector();
-      startApp();
-    } else {
-      _refreshCurrentView(); buildHistSelector();
-    }
-    // Snapshot automático: guardar foto del mes anterior si no existe
-    checkAndSaveSnapshot();
-  }
-});
+// Tickets — se cargan DESPUÉS del login según rol (ver initTicketsListener)
+window._ticketsListener=null;
 </script>
 
 <script>
@@ -1129,7 +1105,7 @@ function doLogin(){
     errEl.style.display='none'; window._CU='encargado'; window._CR='est';
     try{sessionStorage.setItem('fg_u','encargado');}catch(e){}
     if(window._db) window._update(window._ref(window._db,'conexiones/encargado'),{ultimaConexion:Date.now(),nombre:'Encargado de estación'});
-    startApp(); return;
+    initTicketsListener(); return;
   }
   const pass=document.getElementById('au-pass').value;
   const usr=(window._usuarios||{})[u];
@@ -1140,7 +1116,7 @@ function doLogin(){
   errEl.style.display='none'; window._CU=u; window._CR=getRole(u);
   try{sessionStorage.setItem('fg_u',u);}catch(e){}
   if(window._db) window._update(window._ref(window._db,'conexiones/'+u),{ultimaConexion:Date.now(),nombre:UNAMES[u]||u});
-  startApp();
+  initTicketsListener();
 }
 
 function logout(){
@@ -1151,6 +1127,71 @@ function logout(){
 }
 
 // ── APP START ─────────────────────────────────────────────
+function initTicketsListener(){
+  // Cancelar listener anterior si existe
+  if(window._ticketsListener){ window._ticketsListener(); window._ticketsListener=null; }
+
+  const cr=window._CR;
+  let ticketsRef;
+
+  if(cr==='est'){
+    // Encargado: NO descarga tickets — solo levanta
+    window._tickets=[];
+    window._ticketsReady=true;
+    startApp();
+    return;
+  }
+
+  // Para todos los demás: cargar tickets del nodo completo
+  // pero filtrar en memoria según rol para reducir procesamiento
+  ticketsRef=ref(db,'tickets');
+
+  window._ticketsListener=onValue(ticketsRef,(snap)=>{
+    if(snap.exists()){
+      let all=Object.entries(snap.val()).map(([k,v])=>{
+        let estado=v.estado||'Abierto';
+        if(estado==='Asignado') estado='Abierto';
+        if(estado==='Esperando Material') estado='En Proceso';
+        // No cargar fotos en memoria — solo metadata
+        const {fotoFalla,fotoCierre,...rest}=v;
+        return {...rest,estado,_key:k,_hasFotoFalla:!!fotoFalla,_hasFotoCierre:!!fotoCierre};
+      });
+
+      // Filtrar según rol
+      if(cr==='sup'){
+        const zonas=SUP_ZONES[window._CU]||[];
+        all=all.filter(t=>zonas.includes(t.est));
+      } else if(cr==='tec'){
+        // Mantenimiento: solo tickets activos + cerrados recientes (últimos 60 días)
+        const hace60=Date.now()-60*86400000;
+        all=all.filter(t=>t.estado!=='Cerrado'||(t.tsC&&t.tsC>=hace60));
+      }
+      // Director y jefe: todos los tickets
+
+      window._tickets=all;
+    } else {
+      window._tickets=[];
+    }
+    window._ticketsReady=true;
+
+    if(!window._appStarted){
+      window._appStarted=true;
+      if(window._pendingUser){
+        const u=window._pendingUser; window._pendingUser=null;
+        window._CU=u; window._CR=getRole(u);
+        window._appReady=true;
+        populateSelects(); buildNav(); buildHistSelector();
+        startApp();
+      } else {
+        startApp();
+      }
+    } else {
+      _refreshCurrentView(); buildHistSelector();
+      checkAndSaveSnapshot();
+    }
+  });
+}
+
 function startApp(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').classList.add('on');
@@ -1649,6 +1690,35 @@ function resetFilters(){
 }
 
 // ── TICKET DETAIL ─────────────────────────────────────────
+function loadFotoFalla(key){
+  const wrap=document.getElementById('foto-falla-wrap-'+key); if(!wrap)return;
+  wrap.innerHTML='<div style="text-align:center;padding:16px;color:var(--g400);font-size:12px">Cargando foto...</div>';
+  loadTicketPhotos(key,(photos)=>{
+    if(photos.fotoFalla) wrap.innerHTML=`<img src="${photos.fotoFalla}" style="width:100%;border-radius:var(--rs);max-height:220px;object-fit:cover;margin-top:8px" alt="">`;
+    else wrap.innerHTML='';
+  });
+}
+
+function loadFotoCierre(key){
+  const wrap=document.getElementById('foto-cierre-wrap-'+key); if(!wrap)return;
+  wrap.innerHTML='<div style="text-align:center;padding:16px;color:var(--g400);font-size:12px">Cargando foto...</div>';
+  loadTicketPhotos(key,(photos)=>{
+    if(photos.fotoCierre) wrap.innerHTML=`<img src="${photos.fotoCierre}" style="width:100%;border-radius:var(--rs);max-height:220px;object-fit:cover;margin-top:8px" alt="">`;
+    else wrap.innerHTML='';
+  });
+}
+
+function loadTicketPhotos(key, callback){
+  // Cargar fotos bajo demanda desde Firebase solo cuando se abre el ticket
+  if(!window._db){callback({});return;}
+  window._onValue(window._ref(window._db,'tickets/'+key),(snap)=>{
+    if(snap.exists()){
+      const data=snap.val();
+      callback({fotoFalla:data.fotoFalla||null,fotoCierre:data.fotoCierre||null});
+    } else { callback({}); }
+  },{onlyOnce:true});
+}
+
 function openTicket(key){
   const t=window._tickets.find(x=>(x._key||x.id)===key); if(!t)return;
   const venc=false;
@@ -1707,30 +1777,8 @@ function openTicket(key){
     </div>
   </div>`;
 
-  const fotoFalla=t.fotoFalla?`<img src="${t.fotoFalla}" style="width:100%;border-radius:var(--rs);max-height:180px;object-fit:cover;margin-top:8px" alt="">`:'' ;
-  const fotoCierre=t.fotoCierre&&t.estado==='Cerrado'?`<div style="margin-top:8px"><p style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:4px">Foto de cierre</p><img src="${t.fotoCierre}" style="width:100%;border-radius:var(--rs);max-height:180px;object-fit:cover" alt=""></div>`:'';
-
-  document.getElementById('m-detail-body').innerHTML=`
-    <button class="back-btn" onclick="closeModal('m-detail')"><i class="ti ti-arrow-left"></i>Regresar</button>
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
-      <div><p style="font-size:11px;font-weight:800;color:var(--red);letter-spacing:.05em">${t.id}</p><p style="font-size:17px;font-weight:800">${t.cat}</p><p style="font-size:13px;color:var(--g500);margin-top:2px">${t.sub}</p></div>
-      <div style="text-align:right">${urgBadge(t.urg)}${window._CR==='director'?`<br><button class="bs bs-out" style="margin-top:6px;font-size:11px;padding:4px 8px" onclick="closeModal('m-detail');openEditTicket('${key}')"><i class="ti ti-pencil"></i>Editar</button>`:''}
-      <br><span style="font-size:11px;color:var(--g400);margin-top:4px;display:block">${t.est}</span></div>
-    </div>
-    <div style="display:flex;gap:8px;margin:10px 0">
-      <div style="flex:1;background:var(--g50);border:1px solid var(--g200);border-radius:var(--rs);padding:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">Tiempo total</div><div style="font-size:15px;font-weight:800">${tC}</div></div>
-      <div style="flex:1;background:var(--g50);border:1px solid var(--g200);border-radius:var(--rs);padding:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:3px">En proceso</div><div style="font-size:15px;font-weight:800">${tI}</div></div>
-    </div>
-
-    <div class="dr"><div class="di"><i class="ti ti-align-left"></i></div><div><div class="dl">Descripción</div><div class="dv">${t.desc}</div>${fotoFalla}</div></div>
-    <div class="dr"><div class="di"><i class="ti ti-user"></i></div><div><div class="dl">Reportado por</div><div class="dv">${t.rep}</div></div></div>
-    <div class="dr"><div class="di"><i class="ti ti-calendar"></i></div><div><div class="dl">Fecha de reporte</div><div class="dv">${fmtDate(t.ts)}</div></div></div>
-    ${t.motivoProceso?`<div class="dr"><div class="di"><i class="ti ti-info-circle"></i></div><div><div class="dl">Motivo en proceso</div><div class="dv">${t.motivoProceso}</div></div></div>`:''}
-    ${t.atendidoPor?`<div class="dr"><div class="di"><i class="ti ti-tool"></i></div><div><div class="dl">Atendido por</div><div class="dv">${t.atendidoPor}</div></div></div>`:''}
-    ${t.accion?`<div class="dr"><div class="di"><i class="ti ti-circle-check"></i></div><div><div class="dl">Acción realizada</div><div class="dv">${t.accion}</div></div></div>`:''}
-    ${fotoCierre}
-    <div class="sdiv">Estado — ${estadoBadge(t.estado)}</div>${timeline}
-    ${actionBlock}${chatHtml}`;
+  const fotoFalla=(t._hasFotoFalla||t.fotoFalla)?`<div id="foto-falla-wrap-${key}" style="margin-top:8px"><div style="background:var(--g100);border-radius:var(--rs);height:72px;display:flex;align-items:center;justify-content:center;cursor:pointer;gap:8px" onclick="loadFotoFalla('${key}')"><i class="ti ti-photo" style="font-size:18px;color:var(--g400)"></i><span style="font-size:12px;color:var(--g500)">Ver foto de falla</span></div></div>`:'';
+  const fotoCierre=t.estado==='Cerrado'&&(t._hasFotoCierre||t.fotoCierre)?`<div style="margin-top:8px"><p style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;margin-bottom:4px">Foto de cierre</p><div id="foto-cierre-wrap-${key}" style="margin-top:4px"><div style="background:var(--g100);border-radius:var(--rs);height:72px;display:flex;align-items:center;justify-content:center;cursor:pointer;gap:8px" onclick="loadFotoCierre('${key}')"><i class="ti ti-photo-check" style="font-size:18px;color:var(--green)"></i><span style="font-size:12px;color:var(--g500)">Ver foto de cierre</span></div></div></div>`:''
   openModal('m-detail');
   setTimeout(()=>{const cm=document.getElementById('chat-msgs');if(cm)cm.scrollTop=cm.scrollHeight;},100);
 }
@@ -2591,7 +2639,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     const check=setInterval(()=>{
       if(window._fbReady&&window._usuariosReady){clearInterval(check);clearTimeout(timeout);
         populateLoginSelect();
-        if(s&&UNAMES[s]){window._CU=s;window._CR=getRole(s);document.getElementById('au').value=s;startApp();}
+        if(s&&UNAMES[s]){window._CU=s;window._CR=getRole(s);document.getElementById('au').value=s;initTicketsListener();}
         else showLogin();
       }
     },100);
