@@ -1122,6 +1122,9 @@ function doLogin(){
 function logout(){
   try{sessionStorage.removeItem('fg_u');}catch(e){}
   window._CU=null; window._CR=null;
+  window._appStarted=false;
+  window._appReady=false;
+  if(window._ticketsListener){ window._ticketsListener(); window._ticketsListener=null; }
   document.getElementById('app').classList.remove('on');
   document.getElementById('auth').style.display='flex';
 }
