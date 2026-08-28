@@ -1131,6 +1131,12 @@ function initTicketsListener(){
   // Cancelar listener anterior si existe
   if(window._ticketsListener){ window._ticketsListener(); window._ticketsListener=null; }
 
+  // Verificar que Firebase esté listo
+  if(!window._ref||!window._db){
+    setTimeout(initTicketsListener, 200);
+    return;
+  }
+
   const cr=window._CR;
   let ticketsRef;
 
