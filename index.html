@@ -1144,9 +1144,9 @@ function initTicketsListener(){
 
   // Para todos los demás: cargar tickets del nodo completo
   // pero filtrar en memoria según rol para reducir procesamiento
-  ticketsRef=ref(db,'tickets');
+  ticketsRef=window._ref(window._db,'tickets');
 
-  window._ticketsListener=onValue(ticketsRef,(snap)=>{
+  window._ticketsListener=window._onValue(ticketsRef,(snap)=>{
     if(snap.exists()){
       let all=Object.entries(snap.val()).map(([k,v])=>{
         let estado=v.estado||'Abierto';
