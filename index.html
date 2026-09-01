@@ -567,6 +567,15 @@ textarea{resize:none;min-height:80px}
     <button class="btn-main" onclick="createTicket()" style="margin-top:4px"><i class="ti ti-plus"></i>Crear ticket</button>
   </div>
 </div>
+<div class="overlay" id="m-addest" onclick="closeModal('m-addest')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <p class="modal-title">Nueva unidad de servicio</p>
+    <input type="text" id="ne-name" placeholder="Nombre (ej. Wepa Centro)" style="width:100%;padding:10px;border:1px solid var(--g300);border-radius:var(--rs);font-size:14px;margin-bottom:14px">
+    <button class="btn-main" onclick="saveNewEstacion()"><i class="ti ti-check"></i>Guardar</button>
+  </div>
+</div>
+
 <div class="overlay" id="m-addcat" onclick="closeModal('m-addcat')">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
@@ -773,7 +782,7 @@ window._DEFAULT_USUARIOS = {
 };
 let UNAMES={direccion:'Francisco',gerentemtto:'Santiago Meza',mantenimiento:'Mantenimiento',supervisores:'Supervisión',encargado:'Encargado de estación'};
 const SUP_ZONES={'supervisores':['Estadio','Petrolera','San Germán','Valiente','Corsario','Loma Linda','MG','San Carlos','Batuecas','Arcaza','Miramar']};
-const ESTACIONES=['Estadio','Petrolera','San Germán','Valiente','Corsario','Loma Linda','MG','San Carlos','Batuecas','Arcaza','Miramar'];
+const ESTACIONES=['Estadio','Petrolera','San Germán','Valiente','Corsario','Loma Linda','MG','San Carlos','Batuecas','Arcaza','Miramar','Wepa Batuecas','Wepa San Carlos'];
 let SLA_HRS={Alta:6,Media:48,Baja:120};
 
 window._DEFAULT_CATS = [
@@ -1228,7 +1237,7 @@ function startApp(){
   document.getElementById('tb-user').textContent=name;
   document.getElementById('sb-user').textContent=name;
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
-  populateSelects(); buildNav(); buildHistSelector();
+  populateSelects(); buildNav(); buildHistSelector(); loadEstaciones();
   window._appReady=true;
   // Mostrar botón de reporte solo para director
   const btnRep=document.getElementById('btn-reporte');
@@ -2000,6 +2009,7 @@ function sendChatImg(key){
 
 
 function renderCfg(){
+  renderCfgEstaciones();
   const canDel=window._CR==='director';
   // Asegurar que cats sea array válido con subs
   let catsList=[];
@@ -2043,6 +2053,60 @@ function saveCats(){
     obj[c.id]={...c,subs:subsObj};
   });
   fbSet('cats',obj);
+}
+
+function openAddEstacion(){ document.getElementById('ne-name').value=''; openModal('m-addest'); }
+
+function saveNewEstacion(){
+  const name=document.getElementById('ne-name').value.trim();
+  if(!name){showToast('Escribe un nombre');return;}
+  if(ESTACIONES.includes(name)){showToast('Ya existe esa estación');return;}
+  ESTACIONES.push(name);
+  saveEstaciones();
+  closeModal('m-addest');
+  renderCfgEstaciones();
+  populateSelects();
+  showToast('✅ '+name+' agregada');
+}
+
+function deleteEstacion(name){
+  if(!confirm('¿Eliminar "'+name+'"? Los tickets existentes no se verán afectados.'))return;
+  const idx=ESTACIONES.indexOf(name);
+  if(idx>-1) ESTACIONES.splice(idx,1);
+  saveEstaciones();
+  renderCfgEstaciones();
+  populateSelects();
+  showToast('Eliminada');
+}
+
+function saveEstaciones(){
+  if(window._db) window._set(window._ref(window._db,'estaciones'),ESTACIONES);
+}
+
+function renderCfgEstaciones(){
+  const c=document.getElementById('cfg-estaciones'); if(!c)return;
+  c.innerHTML=ESTACIONES.map(e=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--g100)">
+      <span style="font-size:13px;color:var(--g800)"><i class="ti ti-building-store" style="font-size:12px;color:var(--g400);margin-right:6px"></i>${e}</span>
+      <button onclick="deleteEstacion('${e}')" style="background:none;border:none;color:var(--g400);cursor:pointer;font-size:13px"><i class="ti ti-trash"></i></button>
+    </div>`).join('');
+}
+
+function loadEstaciones(){
+  if(!window._db)return;
+  window._onValue(window._ref(window._db,'estaciones'),(snap)=>{
+    if(snap.exists()){
+      const data=snap.val();
+      if(Array.isArray(data)&&data.length>0){
+        ESTACIONES.length=0;
+        data.forEach(e=>ESTACIONES.push(e));
+        populateSelects();
+      }
+    } else {
+      // Guardar las estaciones por defecto en Firebase
+      saveEstaciones();
+    }
+  },{onlyOnce:true});
 }
 
 function saveNewCat(){const name=document.getElementById('nc-name').value.trim();if(!name){showToast('Escribe un nombre');return;}(window._cats||[]).push({id:'c'+Date.now(),name,active:true,subs:[]});saveCats();closeModal('m-addcat');renderCfg();populateSelects();showToast('Categoría "'+name+'" creada');}
@@ -2190,7 +2254,13 @@ function generarReporteMensual(periodo){
   const recibidos=todosTickets.filter(t=>t.ts>=pStart&&t.ts<=pEnd);
   const resueltos=todosTickets.filter(t=>t.tsC&&t.tsC>=pStart&&t.tsC<=pEnd);
   // Arrastre: tickets de meses anteriores activos al inicio del período
-  const arrastreTks=todosTickets.filter(t=>t.ts<pStart&&(!t.tsC||t.tsC>=pStart));
+  // Arrastre: tickets de meses anteriores que estaban activos AL INICIO del período
+  // (no importa si después se cerraron en este mes o en meses posteriores)
+  const arrastreTks=todosTickets.filter(t=>{
+    if(t.ts>=pStart) return false; // no es de mes anterior
+    if(t.tsC&&t.tsC<pStart) return false; // ya estaba cerrado antes del período
+    return true; // estaba activo al inicio del período
+  });
   const totalBase=recibidos.length+arrastreTks.length||1;
   const efectividadGlobal=Math.round(resueltos.length/totalBase*100);
   const pendientesAlCierre=todosTickets.filter(t=>t.estado!=='Cerrado');
@@ -2213,10 +2283,13 @@ function generarReporteMensual(periodo){
     const rec=recibidos.filter(t=>t.est===est).length;
     const res=resueltos.filter(t=>t.est===est).length;
     if(!rec&&!res) return null;
-    const pct=Math.round(res/(rec||1)*100);
+    // Arrastre por estación: tickets anteriores activos al inicio del período
+    const arrEst=arrastreTks.filter(t=>t.est===est).length;
+    const baseEst=(rec+arrEst)||1;
+    const pct=Math.min(100,Math.round(res/baseEst*100)); // max 100%
     const color=pct>=80?'#15803D':pct>=50?'#D97706':'#B91C1C';
     return{est,rec,res,pct,color};
-  }).filter(Boolean).sort((a,b)=>b.rec-a.rec);
+  }).filter(Boolean).sort((a,b)=>b.pct-a.pct); // ordenar mejor a peor
 
   const estacionTop=estData[0]?.est||'—';
 
@@ -2342,6 +2415,8 @@ function generarReporteMensual(periodo){
       </div>
     </div>
 
+    <div class="exec-para">${parrafo}</div>
+
     <div class="kpi-grid">
       <div class="kpi-card blue">
         <div class="kpi-card-label">Recibidos</div>
@@ -2363,11 +2438,7 @@ function generarReporteMensual(periodo){
         <div class="kpi-card-val">${pendientesAlCierre.length}</div>
         <div class="kpi-card-delta">${deltaPoints(efectividadGlobal,prevEfectividad)}</div>
       </div>
-    </div>
-
-    <div class="exec-para">${parrafo}</div>
-
-    <div class="section-title">Desempeño por estación</div>
+    </di    <div class="section-title">Desempeño por estación</div>
     <table class="est-table">
       <thead><tr>
         <th>Estación</th>
@@ -2413,6 +2484,28 @@ function generarReporteMensual(periodo){
       <div class="bullet-card"><div class="bullet-icon">📈</div><div><div class="bullet-label">Efectividad</div><div class="bullet-val">${efectividadGlobal}% ${efectividadGlobal>=prevEfectividad?'↑ mejorando':'↓ a mejorar'}</div></div></div>
     </div>
 
+    <div class="section-title">Actividad por día de la semana</div>
+    <div style="display:flex;align-items:flex-end;justify-content:space-around;gap:8px;height:${BAR_H+60}px;padding:0 10px;margin-bottom:12px;border-bottom:2px solid #E5E7EB">
+      ${weekdataSorted.map(d=>`
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+          <div style="display:flex;align-items:flex-end;gap:4px;height:${BAR_H}px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+              <span style="font-size:10px;font-weight:700;color:#1D4ED8">${d.rec}</span>
+              <div style="width:22px;height:${Math.round(d.rec/maxWD*BAR_H)}px;background:#1D4ED8;border-radius:4px 4px 0 0;min-height:${d.rec?4:0}px"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+              <span style="font-size:10px;font-weight:700;color:#15803D">${d.res}</span>
+              <div style="width:22px;height:${Math.round(d.res/maxWD*BAR_H)}px;background:#15803D;border-radius:4px 4px 0 0;min-height:${d.res?4:0}px"></div>
+            </div>
+          </div>
+          <span style="font-size:11px;font-weight:600;color:#374151;text-align:center">${d.dia.substring(0,3)}</span>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;background:#1D4ED8;border-radius:3px"></div><span style="font-size:11px;color:#374151;font-weight:600">Recibidos</span></div>
+      <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;background:#15803D;border-radius:3px"></div><span style="font-size:11px;color:#374151;font-weight:600">Resueltos</span></div>
+    </div>
+
     <div class="section-title">Fallas más frecuentes</div>
     ${catsSorted.slice(0,6).map(([cat,cnt])=>{
       const subsOfCat=Object.entries(subCount).filter(([k])=>k.startsWith(cat+'||')).sort((a,b)=>b[1]-a[1]).slice(0,4);
@@ -2445,28 +2538,6 @@ function generarReporteMensual(periodo){
     <div class="page-header">
       <div class="page-brand">Flecha Gasolineras &nbsp;·&nbsp; ${mesLabel}</div>
       <div class="page-num">Página 3 de 3</div>
-    </div>
-
-    <div class="section-title">Actividad por día de la semana</div>
-    <div style="display:flex;align-items:flex-end;justify-content:space-around;gap:8px;height:${BAR_H+60}px;padding:0 10px;margin-bottom:12px;border-bottom:2px solid #E5E7EB">
-      ${weekdataSorted.map(d=>`
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
-          <div style="display:flex;align-items:flex-end;gap:4px;height:${BAR_H}px">
-            <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-              <span style="font-size:10px;font-weight:700;color:#1D4ED8">${d.rec}</span>
-              <div style="width:22px;height:${Math.round(d.rec/maxWD*BAR_H)}px;background:#1D4ED8;border-radius:4px 4px 0 0;min-height:${d.rec?4:0}px"></div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-              <span style="font-size:10px;font-weight:700;color:#15803D">${d.res}</span>
-              <div style="width:22px;height:${Math.round(d.res/maxWD*BAR_H)}px;background:#15803D;border-radius:4px 4px 0 0;min-height:${d.res?4:0}px"></div>
-            </div>
-          </div>
-          <span style="font-size:11px;font-weight:600;color:#374151;text-align:center">${d.dia.substring(0,3)}</span>
-        </div>`).join('')}
-    </div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:24px">
-      <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;background:#1D4ED8;border-radius:3px"></div><span style="font-size:11px;color:#374151;font-weight:600">Recibidos</span></div>
-      <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;background:#15803D;border-radius:3px"></div><span style="font-size:11px;color:#374151;font-weight:600">Resueltos</span></div>
     </div>
 
     <div class="section-title">Tickets pendientes al cierre del mes</div>
