@@ -1916,9 +1916,11 @@ function closeTicket(key){
   if(!accion){showToast('Describe la acción realizada');return;}
   if(!quien){showToast('Selecciona quién atendió');return;}
   const t=window._tickets.find(x=>(x._key||x.id)===key);
-  if(!t?.fotoCierre){showToast('Agrega foto de evidencia');return;}
-  const vencido=isVencido(t);
-  fbUpd(key,{accion,atendidoPor:quien,estado:'Cerrado',tsC:Date.now(),cerradoVencido:vencido});
+  // Verificar foto de cierre — puede estar en memoria o ya guardada en Firebase
+  const ppClose=document.getElementById('pp-close');
+  const tienefoto=(ppClose&&ppClose.classList.contains('on'))||t?.fotoCierre||t?._hasFotoCierre;
+  if(!tienefoto){showToast('Agrega foto de evidencia');return;}
+  fbUpd(key,{accion,atendidoPor:quien,estado:'Cerrado',tsC:Date.now(),cerradoVencido:false});
   closeModal('m-detail'); showToast('✅ Ticket cerrado');
 }
 
