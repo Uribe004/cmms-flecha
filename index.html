@@ -713,6 +713,7 @@ textarea{resize:none;min-height:80px}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, onValue, push, set, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 const fbConfig = {
   apiKey:"AIzaSyA-4gEsA9cfPLrtG-iKwFvOAsWNlTPVKQM",
   authDomain:"mantenimiento-cmms.firebaseapp.com",
@@ -724,7 +725,9 @@ const fbConfig = {
 };
 const fbApp = initializeApp(fbConfig);
 const db = getDatabase(fbApp);
+const storage=getStorage(app);
 window._db=db; window._ref=ref; window._push=push; window._set=set; window._update=update; window._onValue=onValue;
+window._storage=storage; window._storageRef=storageRef; window._uploadBytes=uploadBytes; window._getDownloadURL=getDownloadURL;
 window._fbReady=true;
 
 // Cats
@@ -1934,15 +1937,32 @@ function closeTicket(key){
 }
 
 function prevClosePhoto(key){
-  const input=document.getElementById('pi-close'); const t=window._tickets.find(x=>(x._key||x.id)===key);
-  if(!input?.files?.[0]||!t)return;
-  const r=new FileReader();
-  r.onload=e=>{
-    fbUpd(key,{fotoCierre:e.target.result});
-    const prev=document.getElementById('pp-close'); const btn=document.getElementById('pa-close');
-    if(prev){prev.src=e.target.result;prev.classList.add('on');} if(btn){btn.classList.add('has-photo');btn.querySelector('span').textContent='Foto cargada ✓';}
-  };
-  r.readAsDataURL(input.files[0]);
+  const input=document.getElementById('pi-close');
+  if(!input?.files?.[0])return;
+  const file=input.files[0];
+  const prev=document.getElementById('pp-close'); const btn=document.getElementById('pa-close');
+  // Mostrar preview local inmediatamente
+  const localUrl=URL.createObjectURL(file);
+  if(prev){prev.src=localUrl;prev.classList.add('on');}
+  if(btn){btn.classList.add('has-photo');btn.querySelector('span').textContent='Subiendo foto...';}
+  // Subir a Firebase Storage
+  if(window._storage){
+    const sRef=window._storageRef(window._storage,'tickets/'+key+'/fotoCierre_'+Date.now()+'.jpg');
+    window._uploadBytes(sRef,file).then(snap=>window._getDownloadURL(snap.ref)).then(url=>{
+      fbUpd(key,{fotoCierre:url,_hasFotoCierre:true});
+      if(btn) btn.querySelector('span').textContent='Foto cargada ✓';
+    }).catch(()=>{
+      // Fallback a Base64 si Storage falla
+      const r=new FileReader();
+      r.onload=e=>{ fbUpd(key,{fotoCierre:e.target.result}); if(btn) btn.querySelector('span').textContent='Foto cargada ✓'; };
+      r.readAsDataURL(file);
+    });
+  } else {
+    // Fallback a Base64
+    const r=new FileReader();
+    r.onload=e=>{ fbUpd(key,{fotoCierre:e.target.result}); if(btn) btn.querySelector('span').textContent='Foto cargada ✓'; };
+    r.readAsDataURL(file);
+  }
 }
 
 // ── SUBMIT / CREATE TICKET ────────────────────────────────
@@ -1954,11 +1974,22 @@ function submitTicket(){
   const nombre=document.getElementById('r-nombre').value.trim();
   if(!est||!catId||!subId||!desc||!nombre){showToast('Completa todos los campos');return;}
   const cat=getCat(catId); const sub=cat?.subs.find(s=>s.id===subId);
-  const prev=document.getElementById('pp-rep');
-  const fotoFalla=prev?.src&&prev.classList.contains('on')?prev.src:'';
   const id=genId();
-  const ticket={id,est,cat:cat.name,sub:sub.name,desc,urg:sub.urg||'Media',estado:'Abierto',rep:nombre,ts:Date.now(),tsI:null,tsC:null,accion:'',fotoFalla,fotoCierre:'',atendidoPor:''};
-  if(window._db){const nr=window._push(window._ref(window._db,'tickets'));window._set(nr,ticket);}
+  const ticket={id,est,cat:cat.name,sub:sub.name,desc,urg:sub.urg||'Media',estado:'Abierto',rep:nombre,ts:Date.now(),tsI:null,tsC:null,accion:'',fotoFalla:'',fotoCierre:'',atendidoPor:''};
+  if(window._db){
+    const nr=window._push(window._ref(window._db,'tickets'));
+    window._set(nr,ticket).then(()=>{
+      const key=nr.key;
+      // Subir foto de falla a Storage si existe
+      if(window._pendingFotoFalla&&window._storage){
+        const sRef=window._storageRef(window._storage,'tickets/'+key+'/fotoFalla.jpg');
+        window._uploadBytes(sRef,window._pendingFotoFalla).then(snap=>window._getDownloadURL(snap.ref)).then(url=>{
+          window._update(window._ref(window._db,'tickets/'+key),{fotoFalla:url,_hasFotoFalla:true});
+        });
+        window._pendingFotoFalla=null;
+      }
+    });
+  }
   ['r-est','r-cat','r-sub'].forEach(id=>{const s=document.getElementById(id);if(s)s.value='';});
   ['r-desc','r-nombre'].forEach(id=>{const s=document.getElementById(id);if(s)s.value='';});
   document.getElementById('r-hint-wrap').style.display='none';
@@ -2000,9 +2031,23 @@ function sendChat(key){
 }
 function sendChatImg(key){
   const input=document.getElementById('pi-chat'); if(!input?.files?.[0])return;
-  const r=new FileReader();
-  r.onload=e=>{if(!window._db)return;const msgRef=window._push(window._ref(window._db,`tickets/${key}/chat`));window._set(msgRef,{img:e.target.result,author:UNAMES[window._CU]||window._CU,ts:Date.now()});};
-  r.readAsDataURL(input.files[0]);
+  const chatFile=input.files[0];
+  if(window._storage){
+    const sRef=window._storageRef(window._storage,'tickets/'+key+'/chat_'+Date.now()+'.jpg');
+    window._uploadBytes(sRef,chatFile).then(snap=>window._getDownloadURL(snap.ref)).then(url=>{
+      if(!window._db)return;
+      const msgRef=window._push(window._ref(window._db,`tickets/${key}/chat`));
+      window._set(msgRef,{img:url,author:UNAMES[window._CU]||window._CU,ts:Date.now()});
+    }).catch(()=>{
+      const r=new FileReader();
+      r.onload=e=>{if(!window._db)return;const msgRef=window._push(window._ref(window._db,`tickets/${key}/chat`));window._set(msgRef,{img:e.target.result,author:UNAMES[window._CU]||window._CU,ts:Date.now()});};
+      r.readAsDataURL(chatFile);
+    });
+  } else {
+    const r=new FileReader();
+    r.onload=e=>{if(!window._db)return;const msgRef=window._push(window._ref(window._db,`tickets/${key}/chat`));window._set(msgRef,{img:e.target.result,author:UNAMES[window._CU]||window._CU,ts:Date.now()});};
+    r.readAsDataURL(chatFile);
+  }
 }
 
 // ── CONFIG ────────────────────────────────────────────────
