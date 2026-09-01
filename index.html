@@ -421,6 +421,14 @@ textarea{resize:none;min-height:80px}
         <button class="bs bs-red" onclick="openAddCat()"><i class="ti ti-plus"></i>Categoría</button>
       </div>
       <div id="cfg-list"></div>
+
+      <div class="card" style="margin-top:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="card-title" style="margin-bottom:0"><i class="ti ti-building-store"></i>Unidades de servicio</div>
+          <button class="bs bs-red" onclick="openAddEstacion()"><i class="ti ti-plus"></i>Nueva</button>
+        </div>
+        <div id="cfg-estaciones"></div>
+      </div>
     </div>
 
     <!-- USUARIOS -->
@@ -572,6 +580,15 @@ textarea{resize:none;min-height:80px}
     <div class="modal-handle"></div>
     <p class="modal-title">Nueva unidad de servicio</p>
     <input type="text" id="ne-name" placeholder="Nombre (ej. Wepa Centro)" style="width:100%;padding:10px;border:1px solid var(--g300);border-radius:var(--rs);font-size:14px;margin-bottom:14px">
+    <button class="btn-main" onclick="saveNewEstacion()"><i class="ti ti-check"></i>Guardar</button>
+  </div>
+</div>
+
+<div class="overlay" id="m-addest" onclick="closeModal('m-addest')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <p class="modal-title">Nueva unidad de servicio</p>
+    <input type="text" id="ne-name" placeholder="Ej. Wepa Centro, Marketing..." style="width:100%;padding:10px;border:1px solid var(--g300);border-radius:var(--rs);font-size:14px;margin-bottom:14px">
     <button class="btn-main" onclick="saveNewEstacion()"><i class="ti ti-check"></i>Guardar</button>
   </div>
 </div>
@@ -2010,6 +2027,7 @@ function sendChatImg(key){
 
 function renderCfg(){
   renderCfgEstaciones();
+  renderCfgEstaciones();
   const canDel=window._CR==='director';
   // Asegurar que cats sea array válido con subs
   let catsList=[];
@@ -2105,6 +2123,51 @@ function loadEstaciones(){
     } else {
       // Guardar las estaciones por defecto en Firebase
       saveEstaciones();
+    }
+  },{onlyOnce:true});
+}
+
+function openAddEstacion(){ const el=document.getElementById('ne-name'); if(el)el.value=''; openModal('m-addest'); }
+
+function saveNewEstacion(){
+  const name=document.getElementById('ne-name')?.value.trim();
+  if(!name){showToast('Escribe un nombre');return;}
+  if(ESTACIONES.includes(name)){showToast('Ya existe esa unidad');return;}
+  ESTACIONES.push(name);
+  if(window._db) window._set(window._ref(window._db,'estaciones'),ESTACIONES);
+  closeModal('m-addest');
+  renderCfgEstaciones();
+  populateSelects();
+  showToast('✅ '+name+' agregada');
+}
+
+function deleteEstacion(name){
+  if(!confirm('¿Eliminar "'+name+'"?'))return;
+  const idx=ESTACIONES.indexOf(name);
+  if(idx>-1) ESTACIONES.splice(idx,1);
+  if(window._db) window._set(window._ref(window._db,'estaciones'),ESTACIONES);
+  renderCfgEstaciones();
+  populateSelects();
+  showToast('Eliminada');
+}
+
+function renderCfgEstaciones(){
+  const c=document.getElementById('cfg-estaciones'); if(!c)return;
+  c.innerHTML=ESTACIONES.map(e=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--g100)"><span style="font-size:13px;color:var(--g800)"><i class="ti ti-building-store" style="font-size:12px;color:var(--g400);margin-right:6px"></i>${e}</span><button onclick="deleteEstacion('${e}')" style="background:none;border:none;color:var(--g400);cursor:pointer;font-size:14px"><i class="ti ti-trash"></i></button></div>`).join('');
+}
+
+function loadEstaciones(){
+  if(!window._db)return;
+  window._onValue(window._ref(window._db,'estaciones'),(snap)=>{
+    if(snap.exists()){
+      const data=snap.val();
+      if(Array.isArray(data)&&data.length>0){
+        ESTACIONES.length=0;
+        data.forEach(e=>ESTACIONES.push(e));
+        populateSelects();
+      }
+    } else {
+      window._set(window._ref(window._db,'estaciones'),ESTACIONES);
     }
   },{onlyOnce:true});
 }
