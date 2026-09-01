@@ -2524,6 +2524,7 @@ function generarReporteMensual(periodo){
   // PÁGINA 3 — ACTIVIDAD POR DÍA DE SEMANA + PENDIENTES
   // ══════════════════════════════════════════════════════
   // Agrupar por día de semana
+  const BAR_H=120;
   const DIAS_FULL=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   const byWeekday=DIAS_FULL.map((d,i)=>({dia:d,rec:0,res:0,idx:i}));
   recibidos.forEach(t=>{ const d=new Date(t.ts).getDay(); byWeekday[d].rec++; });
@@ -2532,7 +2533,6 @@ function generarReporteMensual(periodo){
   const weekdayOrder=[1,2,3,4,5,6,0];
   const weekdataSorted=weekdayOrder.map(i=>byWeekday[i]).filter(d=>d.rec>0||d.res>0);
   const maxWD=Math.max(...weekdataSorted.map(d=>Math.max(d.rec,d.res)),1);
-  const BAR_H=120; // max bar height in px
 
   const pg3=`<div class="page">
     <div class="page-header">
