@@ -713,7 +713,7 @@ textarea{resize:none;min-height:80px}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, onValue, push, set, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-import { getStorage, ref as sRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+import { getStorage, ref as sRef, uploadString, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 const fbConfig = {
   apiKey:"AIzaSyA-4gEsA9cfPLrtG-iKwFvOAsWNlTPVKQM",
   authDomain:"mantenimiento-cmms.firebaseapp.com",
@@ -728,7 +728,7 @@ const db = getDatabase(fbApp);
 window._db=db; window._ref=ref; window._push=push; window._set=set; window._update=update; window._onValue=onValue;
 window._fbReady=true;
 const storage = getStorage(fbApp);
-window._storage=storage; window._sRef=sRef; window._uploadString=uploadString; window._getDownloadURL=getDownloadURL;
+window._storage=storage; window._sRef=sRef; window._uploadString=uploadString; window._getDownloadURL=getDownloadURL; window._deleteObject=deleteObject;
 
 // Cats
 onValue(ref(db,'cats'),(snap)=>{
@@ -1905,7 +1905,12 @@ function openTicket(key){
 
   const closedInfo=(t.accion?`<div class="sdiv">Acción realizada</div><p style="font-size:13px;color:var(--g700);background:var(--g50);padding:10px;border-radius:var(--rs)">${t.accion}</p>`:'')+(t.atendidoPor?`<p style="font-size:12px;color:var(--g500);margin-top:6px">Atendido por: <strong>${t.atendidoPor}</strong></p>`:'')+fotoCierre;
 
-  document.getElementById('m-detail-body').innerHTML=header+actionBlock+chatHtml+closedInfo;
+  const ownerBlock=window._CU==='direccion'?`<div style="display:flex;gap:8px;margin-top:10px;margin-bottom:4px">
+    <button class="bs bs-out" style="flex:1;font-size:12px" onclick="openEditTicket('${key}')"><i class="ti ti-edit"></i>Editar</button>
+    <button class="bs" style="flex:1;font-size:12px;background:var(--red-light);color:var(--red-dark);border:none" onclick="deleteTicketConfirm('${key}')"><i class="ti ti-trash"></i>Eliminar</button>
+  </div>`:'';
+
+  document.getElementById('m-detail-body').innerHTML=header+ownerBlock+actionBlock+chatHtml+closedInfo;
   openModal('m-detail');
   setTimeout(()=>{const cm=document.getElementById('chat-msgs');if(cm)cm.scrollTop=cm.scrollHeight;},100);
 }
@@ -2189,7 +2194,9 @@ function tsToLocal(ts){ if(!ts)return''; const d=new Date(ts); const pad=n=>Stri
 function localToTs(str){ if(!str)return null; return new Date(str).getTime(); }
 
 function openEditTicket(key){
+  if(window._CU!=='direccion'){showToast('No autorizado');return;}
   const t=window._tickets.find(x=>(x._key||x.id)===key); if(!t)return;
+  closeModal('m-detail');
   editKey=key;
   const eEst=document.getElementById('e-est');
   eEst.innerHTML=ESTACIONES.map(e=>`<option value="${e}" ${t.est===e?'selected':''}>${e}</option>`).join('');
@@ -2234,6 +2241,23 @@ function saveEditTicket(){
   fbUpd(editKey,updates);
   closeModal('m-edit');
   showToast('✅ Ticket actualizado');
+}
+
+function deleteTicketConfirm(key){
+  if(window._CU!=='direccion'){showToast('No autorizado');return;}
+  if(!confirm('¿Eliminar este ticket permanentemente? Esta acción no se puede deshacer.'))return;
+  deleteTicket(key);
+}
+
+function deleteTicket(key){
+  if(window._CU!=='direccion')return;
+  if(window._db) window._set(window._ref(window._db,'tickets/'+key),null);
+  if(window._storage&&window._sRef&&window._deleteObject){
+    window._deleteObject(window._sRef(window._storage,'tickets/'+key+'/fotoFalla.jpg')).catch(()=>{});
+    window._deleteObject(window._sRef(window._storage,'tickets/'+key+'/fotoCierre.jpg')).catch(()=>{});
+  }
+  closeModal('m-detail');
+  showToast('🗑️ Ticket eliminado');
 }
 
 // ── REPORTE MENSUAL ───────────────────────────────────────
