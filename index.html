@@ -713,6 +713,7 @@ textarea{resize:none;min-height:80px}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, onValue, push, set, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getStorage, ref as sRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 const fbConfig = {
   apiKey:"AIzaSyA-4gEsA9cfPLrtG-iKwFvOAsWNlTPVKQM",
   authDomain:"mantenimiento-cmms.firebaseapp.com",
@@ -726,6 +727,8 @@ const fbApp = initializeApp(fbConfig);
 const db = getDatabase(fbApp);
 window._db=db; window._ref=ref; window._push=push; window._set=set; window._update=update; window._onValue=onValue;
 window._fbReady=true;
+const storage = getStorage(fbApp);
+window._storage=storage; window._sRef=sRef; window._uploadString=uploadString; window._getDownloadURL=getDownloadURL;
 
 // Cats
 onValue(ref(db,'cats'),(snap)=>{
@@ -1919,17 +1922,21 @@ function marcarEnProceso(key){
   closeModal('m-detail'); showToast('Marcado en proceso');
 }
 
-function closeTicket(key){
+async function closeTicket(key){
   const accion=document.getElementById('caccion')?.value.trim();
   const quien=document.getElementById('quien-atendio')?.value;
   if(!accion){showToast('Describe la acción realizada');return;}
   if(!quien){showToast('Selecciona quién atendió');return;}
   const t=window._tickets.find(x=>(x._key||x.id)===key);
-  // Verificar foto de cierre — puede estar en memoria o ya guardada en Firebase
   const ppClose=document.getElementById('pp-close');
-  const tienefoto=(ppClose&&ppClose.classList.contains('on'))||t?.fotoCierre||t?._hasFotoCierre;
+  const nuevaFotoLocal = ppClose&&ppClose.classList.contains('on') ? ppClose.src : null;
+  const tienefoto = nuevaFotoLocal || t?.fotoCierre || t?._hasFotoCierre;
   if(!tienefoto){showToast('Agrega foto de evidencia');return;}
   fbUpd(key,{accion,atendidoPor:quien,estado:'Cerrado',tsC:Date.now(),cerradoVencido:false});
+  if(nuevaFotoLocal){
+    const url=await subirFoto(nuevaFotoLocal,'tickets/'+key+'/fotoCierre.jpg');
+    fbUpd(key,{fotoCierre:url});
+  }
   closeModal('m-detail'); showToast('✅ Ticket cerrado');
 }
 
@@ -1938,7 +1945,6 @@ function prevClosePhoto(key){
   if(!input?.files?.[0]||!t)return;
   const r=new FileReader();
   r.onload=e=>{
-    fbUpd(key,{fotoCierre:e.target.result});
     const prev=document.getElementById('pp-close'); const btn=document.getElementById('pa-close');
     if(prev){prev.src=e.target.result;prev.classList.add('on');} if(btn){btn.classList.add('has-photo');btn.querySelector('span').textContent='Foto cargada ✓';}
   };
@@ -1946,7 +1952,13 @@ function prevClosePhoto(key){
 }
 
 // ── SUBMIT / CREATE TICKET ────────────────────────────────
-function submitTicket(){
+async function subirFoto(dataUrl, path){
+  const r = window._sRef(window._storage, path);
+  await window._uploadString(r, dataUrl, 'data_url');
+  return await window._getDownloadURL(r);
+}
+window._subirFoto = subirFoto;
+async function submitTicket(){
   const est=document.getElementById('r-est').value;
   const catId=document.getElementById('r-cat').value;
   const subId=document.getElementById('r-sub').value;
@@ -1955,10 +1967,17 @@ function submitTicket(){
   if(!est||!catId||!subId||!desc||!nombre){showToast('Completa todos los campos');return;}
   const cat=getCat(catId); const sub=cat?.subs.find(s=>s.id===subId);
   const prev=document.getElementById('pp-rep');
-  const fotoFalla=prev?.src&&prev.classList.contains('on')?prev.src:'';
+  const tieneFoto = prev?.src && prev.classList.contains('on');
   const id=genId();
-  const ticket={id,est,cat:cat.name,sub:sub.name,desc,urg:sub.urg||'Media',estado:'Abierto',rep:nombre,ts:Date.now(),tsI:null,tsC:null,accion:'',fotoFalla,fotoCierre:'',atendidoPor:''};
-  if(window._db){const nr=window._push(window._ref(window._db,'tickets'));window._set(nr,ticket);}
+  const ticket={id,est,cat:cat.name,sub:sub.name,desc,urg:sub.urg||'Media',estado:'Abierto',rep:nombre,ts:Date.now(),tsI:null,tsC:null,accion:'',fotoFalla:'',fotoCierre:'',atendidoPor:''};
+  if(window._db){
+    const nr=window._push(window._ref(window._db,'tickets'));
+    window._set(nr,ticket);
+    if(tieneFoto){
+      const url=await subirFoto(prev.src,'tickets/'+id+'/fotoFalla.jpg');
+      window._update(nr,{fotoFalla:url});
+    }
+  }
   ['r-est','r-cat','r-sub'].forEach(id=>{const s=document.getElementById(id);if(s)s.value='';});
   ['r-desc','r-nombre'].forEach(id=>{const s=document.getElementById(id);if(s)s.value='';});
   document.getElementById('r-hint-wrap').style.display='none';
