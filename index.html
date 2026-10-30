@@ -1129,6 +1129,7 @@ function doLogin(){
   const u=document.getElementById('au').value;
   const errEl=document.getElementById('aerr');
   if(!u){errEl.textContent='Selecciona tu perfil.';errEl.style.display='block';return;}
+  if(u!=='direccion'){errEl.textContent='Sistema de tickets en pausa. Contacta a Dirección.';errEl.style.display='block';return;}
   if(u==='encargado'){
     if(window._usuarios&&!window._usuarios['encargado']){
       window._usuarios['encargado']={nombre:'Encargado de estación',rol:'est',pass:''};
@@ -2963,8 +2964,8 @@ window.addEventListener('DOMContentLoaded',()=>{
     const check=setInterval(()=>{
       if(window._fbReady&&window._usuariosReady){clearInterval(check);clearTimeout(timeout);
         populateLoginSelect();
-        if(s&&UNAMES[s]){window._CU=s;window._CR=getRole(s);document.getElementById('au').value=s;initTicketsListener();}
-        else showLogin();
+        if(s&&UNAMES[s]&&s==='direccion'){window._CU=s;window._CR=getRole(s);document.getElementById('au').value=s;initTicketsListener();}
+        else { try{sessionStorage.removeItem('fg_u');}catch(e){} showLogin(); }
       }
     },100);
   }catch(e){document.getElementById('loading-screen').style.display='none';document.getElementById('auth').style.display='flex';}
